@@ -1,0 +1,57 @@
+{
+  "robot": "burger2",
+  "kind": "via_waypoints",
+  "source": "shared simulation aisle; WP4 is Burger 2 home junction",
+  "requires_site_validation": true,
+  "legs": [
+    {
+      "from": "home",
+      "to": "waiting",
+      "via": [
+        4
+      ]
+    },
+    {
+      "from": "waiting",
+      "to": "home",
+      "via": [
+        4
+      ]
+    },
+    {
+      "from": "assembly",
+      "to": "home",
+      "via": [
+        3,
+        4
+      ]
+    },
+    {
+      "from": "warehouse",
+      "to": "assembly",
+      "via": [
+        2,
+        1,
+        3
+      ]
+    },
+    {
+      "from": "assembly",
+      "to": "waiting",
+      "via": [
+        3,
+        4
+      ]
+    },
+    {
+      "from": "waiting",
+      "to": "warehouse",
+      "via": [
+        4,
+        3,
+        1,
+        2
+      ]
+    }
+  ]
+}

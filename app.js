@@ -36,14 +36,14 @@ Object.entries(RobotSimulation.POINTS).forEach(([place,point])=>{
  $('dock-cues').append(cue);
 });
 
-// Mark Burger 1's measured waypoint IDs at corresponding schematic aisle positions.
+// Shared schematic waypoints; real map coordinates are documented separately.
 Object.entries(RobotSimulation.WAYPOINTS).forEach(([id,point])=>{
  const marker=document.createElementNS(svgNS,'g');
  marker.setAttribute('class','waypoint-marker');
  marker.setAttribute('data-waypoint-id',id);
  marker.setAttribute('transform',`translate(${point.join(' ')})`);
  const title=document.createElementNS(svgNS,'title');
- title.textContent=`WP${id} · 버거 1 경유·회전 지점 (실제 map 좌표는 웨이포인트 페이지 참고)`;
+ title.textContent=`WP${id} · ${({1:'버거 1 초기위치 합류',2:'자재창고 통로',3:'제작공정 합류',4:'버거 2 초기위치 합류'})[id]} · 공통 경유·회전 지점`;
  const dot=document.createElementNS(svgNS,'circle');
  dot.setAttribute('r','10');
  const label=document.createElementNS(svgNS,'text');
@@ -179,13 +179,16 @@ function render(){
  document.querySelector('.order-status').className='order-status'+(playing?' running':s.done?' complete':'');
  ['quantity','plus','minus','product'].forEach(id=>$(id).disabled=!!plan&&!s.done);$('start').disabled=!!plan&&!s.done;$('start').innerHTML=s.done?'<span>↻</span> 새 주문 · 시작':'<span>▶</span> 주문 · 시작';
  $('play').textContent=playing?'Ⅱ':'▶';$('play').setAttribute('aria-label',playing?'일시정지':'재생');$('elapsed').textContent=formatTime(time);$('duration').textContent=formatTime(plan?.duration||0);$('timeline').max=plan?.duration||100;$('timeline').value=time;$('timeline').disabled=!plan;$('previous').disabled=!plan||time===0;$('next').disabled=!!plan&&s.done;$('export').disabled=!plan;
- const b1Move=s.active.find(t=>t.type==='move'&&t.actor===0&&t.via.length);
- const activeRoute=$('active-waypoint-route');
- activeRoute.setAttribute('d',b1Move?RobotSimulation.path(b1Move.from,b1Move.to,0).map((p,i)=>`${i?'L':'M'}${p.join(' ')}`).join(' '):'');
+ const moves=s.active.filter(t=>t.type==='move'&&t.via.length);
+ for(const robot of [0,1]){
+  const move=moves.find(t=>t.actor===robot);
+  const activeRoute=$(robot===0?'active-waypoint-route':'active-waypoint-route-b2');
+  activeRoute.setAttribute('d',move?RobotSimulation.path(move.from,move.to,robot).map((p,i)=>`${i?'L':'M'}${p.join(' ')}`).join(' '):'');
+ }
  document.querySelectorAll('.waypoint-marker').forEach(marker=>{
   const id=Number(marker.dataset.waypointId),point=RobotSimulation.WAYPOINTS[id];
-  marker.classList.toggle('on-route',!!b1Move&&b1Move.via.includes(id));
-  marker.classList.toggle('current',!!b1Move&&Math.hypot(s.robots[0].position[0]-point[0],s.robots[0].position[1]-point[1])<20);
+  marker.classList.toggle('on-route',moves.some(move=>move.via.includes(id)));
+  marker.classList.toggle('current',moves.some(move=>move.via.includes(id)&&Math.hypot(s.robots[move.actor].position[0]-point[0],s.robots[move.actor].position[1]-point[1])<20));
  });
  s.robots.forEach((r,i)=>{const g=$('robot'+(i+1));g.setAttribute('transform',`translate(${r.position.join(' ')})`);g.querySelector('.robot-body').setAttribute('transform',`rotate(${r.heading})`);g.querySelector('.cargo').innerHTML=Array.from({length:r.parts},(_,n)=>`<rect x="${n*9}" width="7" height="6" rx="1" fill="${i?'#d99032':'#3979c6'}"/>`).join('');const d=$('device-b'+(i+1));d.querySelector('.device-status').textContent=r.status;d.querySelector('.part-dots').innerHTML=Array.from({length:3},(_,n)=>`<i class="${n<r.parts?'filled':''}"></i>`).join('');d.classList.toggle('working',s.active.some(t=>t.actor===i&&t.type==='move'));});
  $('jig').setAttribute('transform',`translate(${600-s.linear*95} 812)`);

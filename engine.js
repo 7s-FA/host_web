@@ -6,12 +6,19 @@
   const DOCK_HEADINGS = {home:270,waiting:180,warehouse:0,assembly:90};
   // Conceptual positions on the portrait simulation map; metric map coordinates live in waypoints-burger1.json.
   // WP2 is midway along the warehouse aisle in the source sketch, separate from the 10 cm undock point.
-  const WAYPOINTS = {1:[340,700],2:[340,500],3:[340,750],4:[360,750]};
-  const BURGER1_VIA = {
-    'home:warehouse':[1,2], 'warehouse:assembly':[2,1,3,4],
-    'assembly:waiting':[4,3], 'waiting:warehouse':[3,1,2],
-    'waiting:home':[3,1], 'assembly:home':[4,3,1]
+  const WAYPOINTS = {1:[340,700],2:[340,500],3:[340,750],4:[340,795]};
+  // Shared aisle: WP1 joins Burger 1 home, WP4 joins Burger 2 home, WP3 joins assembly.
+  const COMMON_VIA = {
+    'warehouse:assembly':[2,1,3], 'assembly:waiting':[3,4],
+    'waiting:warehouse':[4,3,1,2]
   };
+  const BURGER1_VIA = {...COMMON_VIA,
+    'home:warehouse':[1,2], 'waiting:home':[4,3,1], 'assembly:home':[3,1]
+  };
+  const BURGER2_VIA = {...COMMON_VIA,
+    'home:waiting':[4], 'waiting:home':[4], 'assembly:home':[3,4]
+  };
+  const ROBOT_VIA = [BURGER1_VIA,BURGER2_VIA];
   const NAME = {home:'초기위치',waiting:'대기장소',warehouse:'자재창고',assembly:'제작공정'};
   function makePlan(quantity, config=Settings.defaults) {
     config=Settings.validate(config);
@@ -27,7 +34,7 @@
       const motion=makeMotion(route,DOCK_HEADINGS[from],duration,reverseSegments,DOCK_HEADINGS[to],config['burger'+(robot+1)]);
       motion.forEach(phase=>{phase.parking=phase.type==='drive'&&to==='waiting'&&phase.to===route.at(-1);});
       const end=start+motion.at(-1).end;
-      task(robot,'move',start,end,{from,to,job,motion,via:robot===0?(BURGER1_VIA[from+':'+to]||[]):[]});
+      task(robot,'move',start,end,{from,to,job,motion,via:ROBOT_VIA[robot][from+':'+to]||[]});
       event(start,'move_start',{robot,from,to,job,text:`버거 ${robot+1} · ${NAME[to]}로 이동`,photo:to==='warehouse'?'warehouse':to==='home'?'home':'route'});
       for(const phase of motion){
         if(phase.type==='turn')event(start+phase.start,'turn_start',{robot,from,to,job,text:`버거 ${robot+1} · 정지 후 ${Math.abs(phase.delta)===180?'180° 방향 전환':phase.delta>0?'우회전 90°':'좌회전 90°'}`,photo:'route'});
@@ -88,10 +95,10 @@
   }
   function point(place,robot) {return POINTS[place==='home'?'home'+(robot+1):place];}
   function path(from,to,robot) {
-    if(robot===0&&BURGER1_VIA[from+':'+to]){
+    if(ROBOT_VIA[robot]?.[from+':'+to]){
       const start=point(from,robot),end=point(to,robot);
       const exit={home:[start[0]+40,start[1]],warehouse:[340,340],assembly:[360,750],waiting:[340,880]}[from];
-      return [start,exit,...BURGER1_VIA[from+':'+to].map(id=>WAYPOINTS[id]),end]
+      return [start,exit,...ROBOT_VIA[robot][from+':'+to].map(id=>WAYPOINTS[id]),end]
         .filter((p,i,all)=>!i||p[0]!==all[i-1][0]||p[1]!==all[i-1][1]);
     }
     if(from==='home'&&(to==='warehouse'||to==='waiting')){
@@ -233,6 +240,6 @@ function stagesFor(quantity,config=Settings.defaults){
     }
     return conditions;
   }
-  const api={stagesFor,stageConditions,makePlan,snapshot,path,position,pose,makeMotion,motionPose,POINTS,DOCK_HEADINGS,WAYPOINTS,BURGER1_VIA};
+  const api={stagesFor,stageConditions,makePlan,snapshot,path,position,pose,makeMotion,motionPose,POINTS,DOCK_HEADINGS,WAYPOINTS,BURGER1_VIA,BURGER2_VIA};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.RobotSimulation=api;
 })(typeof window!=='undefined'?window:globalThis);

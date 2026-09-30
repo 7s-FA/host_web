@@ -41,7 +41,7 @@ jobs:
       - name: Prepare static website
         run: |
           mkdir -p _site
-          cp dashboard.css control.html control.css control.js HOST_CONTROL_GUIDE.md ros-config.js ros-client.js ROS_BRIDGE_GUIDE.md index.html styles.css app.js engine.js host-client.js config.js settings.js admin.html admin.js admin.css downloads.html downloads.css waypoints.html waypoints.css waypoints.js routes-burger1.json system-config.json system-policy.js host-test.zip _site/
+          cp dashboard.css control.html control.css control.js HOST_CONTROL_GUIDE.md ros-config.js ros-client.js ROS_BRIDGE_GUIDE.md index.html styles.css app.js engine.js host-client.js config.js settings.js admin.html admin.js admin.css downloads.html downloads.css waypoints.html waypoints.css waypoints.js routes-burger1.json routes-burger2.json system-config.json system-policy.js host-test.zip _site/
           if test -f waypoints-burger1.json; then cp waypoints-burger1.json _site/; fi
           cp -R assets _site/assets
       - uses: actions/configure-pages@v5
