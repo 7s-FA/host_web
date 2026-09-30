@@ -15,6 +15,7 @@ html=html.replace('<script src="assets/vendor/roslib-1.4.1.min.js"></script>', '
 html=html.replace('href="admin.html"','href="https://7s-fa.github.io/host_web/admin.html"')
 html=html.replace('href="downloads.html"','href="https://7s-fa.github.io/host_web/downloads.html"')
 html=html.replace('href="control.html"','href="https://7s-fa.github.io/host_web/control.html"')
+html=html.replace('href="waypoints.html"','href="https://7s-fa.github.io/host_web/waypoints.html"')
 for key,data in photos.items():
     html=html.replace('src="assets/'+key+'.jpg"','src="'+data+'"')
 html=re.sub(r'<script src="engine\.js(?:\?[^"]*)?"></script>',lambda _: '<script>window.EMBEDDED_PHOTOS='+json.dumps(photos)+';</script><script>'+(root/'engine.js').read_text()+'</script>',html)
