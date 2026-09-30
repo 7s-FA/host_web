@@ -1,0 +1,394 @@
+{
+  "version": 1,
+  "order": {
+    "product_type": "A",
+    "quantity_min": 1,
+    "quantity_max": 20,
+    "quantity_default": 2,
+    "parts_per_product": 3,
+    "auto_advance_default": false
+  },
+  "web_host": {
+    "port": 8082,
+    "browser_timeout_seconds": 5
+  },
+  "ros2": {
+    "domain_id": 40,
+    "action_type": "robot3_interfaces/action/ExecuteTask",
+    "order_state_topic": "/robot3/order/state",
+    "host_heartbeat_topic": "/host/heartbeat",
+    "heartbeat_hz": 2,
+    "heartbeat_timeout_seconds": 3,
+    "goal_response_timeout_seconds": 2
+  },
+  "devices": {
+    "burger1": {
+      "board": "Raspberry Pi",
+      "namespace": "/burger1",
+      "action_name": "/burger1/execute_task",
+      "state_topic": "/burger1/state/report",
+      "event_topic": "/burger1/task/event",
+      "heartbeat_topic": "/burger1/heartbeat",
+      "control_service": "/burger1/control",
+      "get_task_service": "/burger1/get_task",
+      "commands": [
+        "MOVE_TO"
+      ]
+    },
+    "burger2": {
+      "board": "Raspberry Pi",
+      "namespace": "/burger2",
+      "action_name": "/burger2/execute_task",
+      "state_topic": "/burger2/state/report",
+      "event_topic": "/burger2/task/event",
+      "heartbeat_topic": "/burger2/heartbeat",
+      "control_service": "/burger2/control",
+      "get_task_service": "/burger2/get_task",
+      "commands": [
+        "MOVE_TO"
+      ]
+    },
+    "arm1": {
+      "board": "Jetson",
+      "namespace": "/arm1",
+      "action_name": "/arm1/execute_task",
+      "state_topic": "/arm1/state/report",
+      "event_topic": "/arm1/task/event",
+      "heartbeat_topic": "/arm1/heartbeat",
+      "control_service": "/arm1/control",
+      "get_task_service": "/arm1/get_task",
+      "commands": [
+        "LOAD_PARTS"
+      ]
+    },
+    "arm2": {
+      "board": "Raspberry Pi",
+      "namespace": "/arm2",
+      "action_name": "/arm2/execute_task",
+      "state_topic": "/arm2/state/report",
+      "event_topic": "/arm2/task/event",
+      "heartbeat_topic": "/arm2/heartbeat",
+      "control_service": "/arm2/control",
+      "get_task_service": "/arm2/get_task",
+      "commands": [
+        "ASSEMBLE"
+      ]
+    },
+    "arm3": {
+      "board": "Raspberry Pi",
+      "namespace": "/arm3",
+      "action_name": "/arm3/execute_task",
+      "state_topic": "/arm3/state/report",
+      "event_topic": "/arm3/task/event",
+      "heartbeat_topic": "/arm3/heartbeat",
+      "control_service": "/arm3/control",
+      "get_task_service": "/arm3/get_task",
+      "commands": [
+        "LINEAR_PREPARE",
+        "LINEAR_HOME",
+        "PALLETIZE"
+      ]
+    }
+  },
+  "stations": {
+    "HOME": {
+      "label": "초기위치",
+      "docking_mode": "ARUCO_REAR_IR"
+    },
+    "WAREHOUSE": {
+      "label": "자재창고",
+      "docking_mode": "ARUCO_REAR_IR"
+    },
+    "ASSEMBLY": {
+      "label": "제작공정",
+      "docking_mode": "ARUCO_REAR_IR"
+    },
+    "WAITING": {
+      "label": "대기장소",
+      "docking_mode": "FORWARD_REAR_IR"
+    }
+  },
+  "commands": {
+    "MOVE_TO": {
+      "targets": [
+        "HOME",
+        "WAREHOUSE",
+        "ASSEMBLY",
+        "WAITING"
+      ],
+      "execution_timeout_seconds": 120,
+      "result_equals": {
+        "success": true,
+        "stopped": true,
+        "dock_verified": true,
+        "station_id": "$goal.target_station"
+      }
+    },
+    "LOAD_PARTS": {
+      "targets": [
+        "BURGER1",
+        "BURGER2"
+      ],
+      "execution_timeout_seconds": 60,
+      "result_equals": {
+        "success": true,
+        "actual_part_count": "$order.parts_per_product",
+        "inspection": "PASS",
+        "arm_clear": true
+      }
+    },
+    "ASSEMBLE": {
+      "targets": [
+        "A_JIG"
+      ],
+      "execution_timeout_seconds": 120,
+      "result_equals": {
+        "success": true,
+        "inspection": "PASS",
+        "arm_clear": true
+      }
+    },
+    "LINEAR_PREPARE": {
+      "targets": [
+        "A_JIG"
+      ],
+      "execution_timeout_seconds": 30,
+      "result_equals": {
+        "success": true,
+        "position_verified": true,
+        "stopped": true
+      }
+    },
+    "LINEAR_HOME": {
+      "targets": [
+        "HOME"
+      ],
+      "execution_timeout_seconds": 30,
+      "result_equals": {
+        "success": true,
+        "position_verified": true,
+        "stopped": true
+      }
+    },
+    "PALLETIZE": {
+      "targets": [
+        "PALLET"
+      ],
+      "execution_timeout_seconds": 60,
+      "result_equals": {
+        "success": true,
+        "inspection": "PASS",
+        "arm_clear": true
+      }
+    }
+  },
+  "conditions": {
+    "boards_ready": {
+      "label": "장치 준비·버전·초기 상태 확인"
+    },
+    "warehouse_docked": {
+      "label": "운송 버거 창고 도킹·정지 완료"
+    },
+    "staging_burger_waiting": {
+      "label": "다음 버거 대기 주차 완료"
+    },
+    "loaded_and_arm1_clear": {
+      "label": "부품 3개 적재·팔1 이탈 완료"
+    },
+    "assembly_docked": {
+      "label": "운송 버거 공정 도킹·정지 완료"
+    },
+    "jig_ready": {
+      "label": "A지그 준비·정지 완료"
+    },
+    "assembled_and_arm2_clear": {
+      "label": "조립 성공·팔2 이탈 완료"
+    },
+    "linear_home": {
+      "label": "리니어 원점 복귀·정지 완료"
+    },
+    "previous_palletized": {
+      "label": "앞 제품 파렛트 적재·팔3 이탈 완료"
+    },
+    "previous_burger_waiting": {
+      "label": "앞 버거 대기 주차·정지 완료"
+    },
+    "final_delivery_docked": {
+      "label": "마지막 운송 버거 공정 도킹·정지 완료"
+    },
+    "all_palletized": {
+      "label": "주문 수량만큼 완제품 적재 완료"
+    },
+    "all_deliveries_arrived": {
+      "label": "모든 운송 도착 완료"
+    },
+    "both_burgers_home": {
+      "label": "두 버거 초기위치 정지 확인"
+    },
+    "devices_safe_idle": {
+      "label": "팔·리니어 작업 종료·안전 상태"
+    }
+  },
+  "transitions": {
+    "first_warehouse": {
+      "requires_all": [
+        "boards_ready"
+      ],
+      "device": "burger1",
+      "command": "MOVE_TO",
+      "target": "WAREHOUSE"
+    },
+    "first_jig": {
+      "requires_all": [
+        "boards_ready"
+      ],
+      "device": "arm3",
+      "command": "LINEAR_PREPARE",
+      "target": "A_JIG"
+    },
+    "load_parts": {
+      "requires_all": [
+        "warehouse_docked"
+      ],
+      "device": "arm1",
+      "command": "LOAD_PARTS",
+      "target": "$current_burger"
+    },
+    "stage_second_burger": {
+      "requires_all": [
+        "warehouse_docked"
+      ],
+      "device": "burger2",
+      "command": "MOVE_TO",
+      "target": "WAITING",
+      "when": "quantity >= 2 and product_no == 1"
+    },
+    "first_delivery": {
+      "requires_all": [
+        "loaded_and_arm1_clear"
+      ],
+      "device": "burger1",
+      "command": "MOVE_TO",
+      "target": "ASSEMBLY"
+    },
+    "assemble": {
+      "requires_all": [
+        "assembly_docked",
+        "jig_ready"
+      ],
+      "device": "arm2",
+      "command": "ASSEMBLE",
+      "target": "A_JIG"
+    },
+    "next_warehouse": {
+      "requires_all": [
+        "assembly_docked",
+        "jig_ready",
+        "staging_burger_waiting"
+      ],
+      "device": "$next_burger",
+      "command": "MOVE_TO",
+      "target": "WAREHOUSE",
+      "when": "has_next_product"
+    },
+    "return_waiting": {
+      "requires_all": [
+        "assembled_and_arm2_clear"
+      ],
+      "device": "$current_burger",
+      "command": "MOVE_TO",
+      "target": "WAITING",
+      "when": "has_next_product"
+    },
+    "linear_home": {
+      "requires_all": [
+        "assembled_and_arm2_clear"
+      ],
+      "device": "arm3",
+      "command": "LINEAR_HOME",
+      "target": "HOME"
+    },
+    "palletize": {
+      "requires_all": [
+        "linear_home"
+      ],
+      "device": "arm3",
+      "command": "PALLETIZE",
+      "target": "PALLET"
+    },
+    "next_delivery": {
+      "requires_all": [
+        "loaded_and_arm1_clear",
+        "previous_palletized",
+        "previous_burger_waiting"
+      ],
+      "device": "$current_burger",
+      "command": "MOVE_TO",
+      "target": "ASSEMBLY"
+    },
+    "next_jig": {
+      "requires_all": [
+        "previous_palletized"
+      ],
+      "device": "arm3",
+      "command": "LINEAR_PREPARE",
+      "target": "A_JIG"
+    },
+    "other_burger_home": {
+      "requires_all": [
+        "final_delivery_docked"
+      ],
+      "device": "$other_burger",
+      "command": "MOVE_TO",
+      "target": "HOME",
+      "when": "quantity >= 2 and final_delivery"
+    },
+    "last_burger_home": {
+      "requires_all": [
+        "assembled_and_arm2_clear"
+      ],
+      "device": "$current_burger",
+      "command": "MOVE_TO",
+      "target": "HOME",
+      "when": "final_product"
+    },
+    "order_done": {
+      "requires_all": [
+        "all_palletized",
+        "all_deliveries_arrived",
+        "both_burgers_home",
+        "devices_safe_idle"
+      ],
+      "event": "ORDER_DONE"
+    }
+  },
+  "counters": {
+    "transport_decrement_event": "DELIVERY_STARTED",
+    "completed_increment_event": "PALLETIZED",
+    "deduplicate_by": [
+      "order_id",
+      "product_no",
+      "event_type"
+    ]
+  },
+  "navigation": {
+    "travel_mode": "NAV2_FORWARD_ONLY",
+    "waiting_parking": "FORWARD_REAR_IR",
+    "velocity_ownership": "SINGLE_OWNER_LOCAL_ARBITER",
+    "dock_departure": {
+      "backup_distance_m": 0.1,
+      "rotate_degrees": 180,
+      "distance_feedback": "ODOMETRY",
+      "rotation_feedback": "ODOMETRY_OR_IMU",
+      "stop_between_phases": true,
+      "executor": "BURGER_LOCAL",
+      "speed_settings_location": "BURGER_LOCAL_CONFIG",
+      "stations": [
+        "HOME",
+        "WAREHOUSE",
+        "ASSEMBLY",
+        "WAITING"
+      ]
+    }
+  }
+}
