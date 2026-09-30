@@ -51,16 +51,20 @@
   fetch('waypoints-burger1.json', {cache:'no-store'}).then(response => response.ok ? response.json() : null).then(data => {if (data) show(data, 'bundled');}).catch(() => {});
   const routeList = document.getElementById('route-list');
   const names = {home:'초기위치',warehouse:'자재창고',assembly:'제작공정',waiting:'대기장소'};
-  fetch('routes-burger1.json', {cache:'no-store'}).then(response => {
-    if (!response.ok) throw new Error('경유 순서를 불러오지 못했습니다.');
-    return response.json();
-  }).then(data => {
-    if (data.robot !== 'burger1' || !Array.isArray(data.legs)) throw new Error('경유 순서 형식이 잘못되었습니다.');
-    data.legs.forEach(leg => {
-      const row=document.createElement('div'); row.className='route-row';
-      const title=document.createElement('strong'); title.textContent=`${names[leg.from]} → ${names[leg.to]}`;
-      const waypoints=document.createElement('code'); waypoints.textContent=leg.via.map(n => `WP${n}`).join(' → ');
-      row.append(title,waypoints); routeList.append(row);
-    });
+  Promise.all([1,2].map(async robot => {
+    const response=await fetch(`routes-burger${robot}.json`, {cache:'no-store'});
+    if (!response.ok) throw new Error(`버거 ${robot} 경유 순서를 불러오지 못했습니다.`);
+    const data=await response.json();
+    if (data.robot!==`burger${robot}` || !Array.isArray(data.legs)) throw new Error('경유 순서 형식이 잘못되었습니다.');
+    return {robot,data};
+  })).then(groups => {
+    for(const {robot,data} of groups){
+      data.legs.forEach(leg => {
+        const row=document.createElement('div'); row.className='route-row';
+        const title=document.createElement('strong'); title.textContent=`버거 ${robot} · ${names[leg.from]} → ${names[leg.to]}`;
+        const waypoints=document.createElement('code'); waypoints.textContent=leg.via.map(n => `WP${n}`).join(' → ');
+        row.append(title,waypoints); routeList.append(row);
+      });
+    }
   }).catch(error => {routeList.textContent=error.message;});
 })();

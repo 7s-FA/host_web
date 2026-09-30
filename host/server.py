@@ -191,7 +191,7 @@ class Handler(BaseHTTPRequestHandler):
             script = 'window.SYSTEM_ORDER_POLICY = ' + json.dumps(self.server.host.config['order']) + ';'
             return self.reply(200, script.encode(), 'text/javascript')
         name = path.lstrip('/') or 'index.html'
-        allowed = name in {'index.html', 'styles.css', 'dashboard.css', 'app.js', 'engine.js', 'host-client.js', 'ros-config.js', 'ros-client.js', 'ROS_BRIDGE_GUIDE.md', 'config.js', 'settings.js', 'admin.html', 'admin.js', 'admin.css', 'downloads.html', 'downloads.css', 'waypoints.html', 'waypoints.css', 'waypoints.js', 'waypoints-burger1.json', 'routes-burger1.json', 'control.html', 'control.css', 'control.js', 'HOST_CONTROL_GUIDE.md', 'system-config.json'} or (name.startswith('assets/') and '..' not in name)
+        allowed = name in {'index.html', 'styles.css', 'dashboard.css', 'app.js', 'engine.js', 'host-client.js', 'ros-config.js', 'ros-client.js', 'ROS_BRIDGE_GUIDE.md', 'config.js', 'settings.js', 'admin.html', 'admin.js', 'admin.css', 'downloads.html', 'downloads.css', 'waypoints.html', 'waypoints.css', 'waypoints.js', 'waypoints-burger1.json', 'routes-burger1.json', 'routes-burger2.json', 'control.html', 'control.css', 'control.js', 'HOST_CONTROL_GUIDE.md', 'system-config.json'} or (name.startswith('assets/') and '..' not in name)
         target = (ROOT / name).resolve()
         if not allowed or not target.is_relative_to(ROOT) or not target.is_file():
             return self.reply(404, {'error': '파일 없음'})

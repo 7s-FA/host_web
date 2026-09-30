@@ -1,24 +1,21 @@
 {
-  "robot": "burger1",
+  "robot": "burger2",
   "kind": "via_waypoints",
   "source": "shared simulation aisle; WP4 is Burger 2 home junction",
   "requires_site_validation": true,
   "legs": [
     {
       "from": "home",
-      "to": "warehouse",
+      "to": "waiting",
       "via": [
-        1,
-        2
+        4
       ]
     },
     {
       "from": "waiting",
       "to": "home",
       "via": [
-        4,
-        3,
-        1
+        4
       ]
     },
     {
@@ -26,7 +23,7 @@
       "to": "home",
       "via": [
         3,
-        1
+        4
       ]
     },
     {
