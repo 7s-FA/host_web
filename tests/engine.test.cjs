@@ -59,7 +59,7 @@ for(let n=1;n<=20;n++){
 }
 for(const robot of [0,1]){
  const route=path('warehouse','assembly',robot);
- assert.equal(route.length,4,'Storage exit includes short backup before aisle transit');
+ assert.equal(route.length,robot===0?6:4,'Storage exit includes short backup and Burger 1 via points');
  assert.deepEqual(route.slice(0,2),[[340,300],[340,340]]);
  const approach=route.at(-2),dock=route.at(-1);
  assert.equal(approach[1],dock[1],'Final approach is horizontal');
@@ -179,6 +179,6 @@ console.log('PASS: final delivery docking completes before the waiting robot ret
 for(const robot of [0,1]){
  const home=POINTS['home'+(robot+1)];
  assert.deepEqual(path('assembly','home',robot),[POINTS.assembly,[360,750],[340,750],[340,home[1]],home]);
- assert.deepEqual(path('waiting','home',robot),[POINTS.waiting,[340,880],[340,home[1]],home]);
+ assert.deepEqual(path('waiting','home',robot),robot===0?[POINTS.waiting,[340,880],[340,750],[340,700],home]:[POINTS.waiting,[340,880],[340,home[1]],home]);
 }
-console.log('PASS: no extra home-side waypoints or detours on either return route.');
+console.log('PASS: Burger 1 via points and Burger 2 return route avoid extra home-side detours.');

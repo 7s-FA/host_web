@@ -49,4 +49,18 @@
     catch(error) { message.textContent=`좌표를 열지 못했습니다: ${error.message}`; message.classList.add('error'); }
   });
   fetch('waypoints-burger1.json', {cache:'no-store'}).then(response => response.ok ? response.json() : null).then(data => {if (data) show(data, 'bundled');}).catch(() => {});
+  const routeList = document.getElementById('route-list');
+  const names = {home:'초기위치',warehouse:'자재창고',assembly:'제작공정',waiting:'대기장소'};
+  fetch('routes-burger1.json', {cache:'no-store'}).then(response => {
+    if (!response.ok) throw new Error('경유 순서를 불러오지 못했습니다.');
+    return response.json();
+  }).then(data => {
+    if (data.robot !== 'burger1' || !Array.isArray(data.legs)) throw new Error('경유 순서 형식이 잘못되었습니다.');
+    data.legs.forEach(leg => {
+      const row=document.createElement('div'); row.className='route-row';
+      const title=document.createElement('strong'); title.textContent=`${names[leg.from]} → ${names[leg.to]}`;
+      const waypoints=document.createElement('code'); waypoints.textContent=leg.via.map(n => `WP${n}`).join(' → ');
+      row.append(title,waypoints); routeList.append(row);
+    });
+  }).catch(error => {routeList.textContent=error.message;});
 })();

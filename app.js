@@ -36,6 +36,25 @@ Object.entries(RobotSimulation.POINTS).forEach(([place,point])=>{
  $('dock-cues').append(cue);
 });
 
+// Mark Burger 1's measured waypoint IDs at corresponding schematic aisle positions.
+Object.entries(RobotSimulation.WAYPOINTS).forEach(([id,point])=>{
+ const marker=document.createElementNS(svgNS,'g');
+ marker.setAttribute('class','waypoint-marker');
+ marker.setAttribute('data-waypoint-id',id);
+ marker.setAttribute('transform',`translate(${point.join(' ')})`);
+ const title=document.createElementNS(svgNS,'title');
+ title.textContent=`WP${id} · 버거 1 경유·회전 지점 (실제 map 좌표는 웨이포인트 페이지 참고)`;
+ const dot=document.createElementNS(svgNS,'circle');
+ dot.setAttribute('r','10');
+ const label=document.createElementNS(svgNS,'text');
+ label.textContent=`WP${id}`;
+ label.setAttribute('x',id==='3'?-14:14);
+ label.setAttribute('y',id==='3'?-13:-12);
+ if(id==='3')label.setAttribute('text-anchor','end');
+ marker.append(title,dot,label);
+ $('waypoint-markers').append(marker);
+});
+
 function formatTime(t){return `${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`;}
 function quantityPolicy(){return HostBridge.enabled&&HostBridge.state?.order_policy||window.SYSTEM_ORDER_POLICY||{quantity_min:1,quantity_max:20};}
 function validateQuantity(){const n=Number($('quantity').value),p=quantityPolicy();if(!Number.isInteger(n)||n<p.quantity_min||n>p.quantity_max)throw Error(`주문 수량을 ${p.quantity_min}~${p.quantity_max} 사이의 정수로 입력해 주세요.`);return n;}
@@ -160,6 +179,14 @@ function render(){
  document.querySelector('.order-status').className='order-status'+(playing?' running':s.done?' complete':'');
  ['quantity','plus','minus','product'].forEach(id=>$(id).disabled=!!plan&&!s.done);$('start').disabled=!!plan&&!s.done;$('start').innerHTML=s.done?'<span>↻</span> 새 주문 · 시작':'<span>▶</span> 주문 · 시작';
  $('play').textContent=playing?'Ⅱ':'▶';$('play').setAttribute('aria-label',playing?'일시정지':'재생');$('elapsed').textContent=formatTime(time);$('duration').textContent=formatTime(plan?.duration||0);$('timeline').max=plan?.duration||100;$('timeline').value=time;$('timeline').disabled=!plan;$('previous').disabled=!plan||time===0;$('next').disabled=!!plan&&s.done;$('export').disabled=!plan;
+ const b1Move=s.active.find(t=>t.type==='move'&&t.actor===0&&t.via.length);
+ const activeRoute=$('active-waypoint-route');
+ activeRoute.setAttribute('d',b1Move?RobotSimulation.path(b1Move.from,b1Move.to,0).map((p,i)=>`${i?'L':'M'}${p.join(' ')}`).join(' '):'');
+ document.querySelectorAll('.waypoint-marker').forEach(marker=>{
+  const id=Number(marker.dataset.waypointId),point=RobotSimulation.WAYPOINTS[id];
+  marker.classList.toggle('on-route',!!b1Move&&b1Move.via.includes(id));
+  marker.classList.toggle('current',!!b1Move&&Math.hypot(s.robots[0].position[0]-point[0],s.robots[0].position[1]-point[1])<20);
+ });
  s.robots.forEach((r,i)=>{const g=$('robot'+(i+1));g.setAttribute('transform',`translate(${r.position.join(' ')})`);g.querySelector('.robot-body').setAttribute('transform',`rotate(${r.heading})`);g.querySelector('.cargo').innerHTML=Array.from({length:r.parts},(_,n)=>`<rect x="${n*9}" width="7" height="6" rx="1" fill="${i?'#d99032':'#3979c6'}"/>`).join('');const d=$('device-b'+(i+1));d.querySelector('.device-status').textContent=r.status;d.querySelector('.part-dots').innerHTML=Array.from({length:3},(_,n)=>`<i class="${n<r.parts?'filled':''}"></i>`).join('');d.classList.toggle('working',s.active.some(t=>t.actor===i&&t.type==='move'));});
  $('jig').setAttribute('transform',`translate(${600-s.linear*95} 812)`);
  s.arms.forEach((v,i)=>{const d=$('device-a'+(i+1));d.querySelector('.device-status').textContent=v;d.classList.toggle('working',v!=='대기');const g=$('arm'+(i+1)+'-map');g.classList.toggle('active-arm',v!=='대기');g.querySelector('use').setAttribute('transform',v!=='대기'?`rotate(${Math.sin(time*2.6)*12})`:'rotate(0)');});
