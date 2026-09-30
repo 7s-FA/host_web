@@ -29,6 +29,7 @@ jobs:
           node host/build_scenarios.cjs
           node tests/engine.test.cjs
           node tests/waypoint-routes.test.cjs
+          node tests/navigation.test.cjs
           node tests/host-client.test.cjs
           node tests/ros-client.test.cjs
           node tests/host-stages.test.cjs

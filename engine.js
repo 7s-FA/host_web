@@ -34,7 +34,12 @@
       const motion=makeMotion(route,DOCK_HEADINGS[from],duration,reverseSegments,DOCK_HEADINGS[to],config['burger'+(robot+1)]);
       motion.forEach(phase=>{phase.parking=phase.type==='drive'&&to==='waiting'&&phase.to===route.at(-1);});
       const end=start+motion.at(-1).end;
-      task(robot,'move',start,end,{from,to,job,motion,via:ROBOT_VIA[robot][from+':'+to]||[]});
+      const navigation=navigationFor(from,to,robot,motion);
+      task(robot,'move',start,end,{from,to,job,motion,navigation,via:ROBOT_VIA[robot][from+':'+to]||[]});
+      for(const step of navigation){
+        if(step.end>step.start)event(start+step.start,'navigation_start',{robot,from,to,job,phase:step.code,controller:step.controller,text:`버거 ${robot+1} · ${step.label}`,photo:to==='warehouse'?'warehouse':'route'});
+        event(start+step.end,'navigation_done',{robot,from,to,job,phase:step.code,controller:step.controller,text:`버거 ${robot+1} · ${step.condition} · 모의 완료`,photo:to==='warehouse'?'warehouse':'route'});
+      }
       event(start,'move_start',{robot,from,to,job,text:`버거 ${robot+1} · ${NAME[to]}로 이동`,photo:to==='warehouse'?'warehouse':to==='home'?'home':'route'});
       for(const phase of motion){
         if(phase.type==='turn')event(start+phase.start,'turn_start',{robot,from,to,job,text:`버거 ${robot+1} · 정지 후 ${Math.abs(phase.delta)===180?'180° 방향 전환':phase.delta>0?'우회전 90°':'좌회전 90°'}`,photo:'route'});
@@ -163,6 +168,34 @@
     }
     return motion;
   }
+  // Local navigation feedback, not Host ACK barriers. Camera/IR are simulated here.
+  function navigationFor(from,to,robot,motion){
+    const steps=[],first=motion[0],turn=motion[1];
+    const add=(code,label,controller,start,end,condition)=>steps.push({code,label,controller,start,end,condition});
+    add('UNDOCK','10cm 후진','cmd_vel',first.start,first.end,'후진 거리 10cm 도달');
+    add('TURN_180','180° 회전','로컬 회전',turn.start,turn.end,'180° 회전 완료');
+    let cursor=turn.end;
+    const arrival=id=>motion.find(p=>p.type==='drive'&&!p.reversing&&p.to[0]===WAYPOINTS[id][0]&&p.to[1]===WAYPOINTS[id][1])?.end;
+    if(from==='home'){
+      const id=robot===0?1:4,end=arrival(id);
+      if(end!==undefined){add('NAV_HOME_WP',`WP${id}로 이동`,'Nav2',cursor,end,`WP${id} 도착`);cursor=end;}
+    }
+    const approach={warehouse:2,assembly:3,home:robot===0?1:4,waiting:4}[to];
+    const at=arrival(approach);
+    if(at!==undefined&&at>cursor+1e-7){
+      add('NAV_APPROACH',`WP${approach}로 이동`,'Nav2',cursor,at,`WP${approach} 도착`);cursor=at;
+    }
+    const end=motion.at(-1).end;
+    if(to==='waiting')add('LINE_APPROACH','대기장소 전진 진입','로컬 주행 + IR',cursor,end,'감지선까지 전진 완료');
+    else add('ARUCO_DOCK','ArUco 정렬·전진','전방 카메라',cursor,end,'마커 추종·정렬 접근 완료');
+    add('IR_STOP','후방 IR 감지·정지','후방 IR',end,end,'IR 감지 및 정지 완료');
+    return steps;
+  }
+  function navigationState(task,time){
+    const steps=task.navigation.map(step=>({...step,done:time>=task.start+step.end}));
+    const index=steps.findIndex(step=>!step.done);
+    return {steps,index:index<0?steps.length-1:index,done:time>=task.end};
+  }
   function motionPose(task,time){
     const elapsed=Math.max(0,Math.min(task.end-task.start,time-task.start));
     const phase=task.motion.find(p=>elapsed<p.end)||task.motion.at(-1);
@@ -204,6 +237,11 @@
         if(r.turning)r.status='정지 · 제자리 회전 중';
         else if(r.reversing)r.status=NAME[t.from]+' 10cm 후진 중';
         else if(r.parking)r.status='대기장소 전진 주차 중';
+        else {
+          const nav=navigationState(t,time),step=nav.steps[nav.index];
+          r.status=step.label+' 중';
+        }
+        r.navigation=navigationState(t,time);
       }
       if(t.type==='prepare')state.linear=f;
       if(t.type==='reset')state.linear=1-f;
@@ -240,6 +278,6 @@ function stagesFor(quantity,config=Settings.defaults){
     }
     return conditions;
   }
-  const api={stagesFor,stageConditions,makePlan,snapshot,path,position,pose,makeMotion,motionPose,POINTS,DOCK_HEADINGS,WAYPOINTS,BURGER1_VIA,BURGER2_VIA};
+  const api={stagesFor,stageConditions,makePlan,snapshot,path,position,pose,makeMotion,motionPose,navigationFor,navigationState,POINTS,DOCK_HEADINGS,WAYPOINTS,BURGER1_VIA,BURGER2_VIA};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.RobotSimulation=api;
 })(typeof window!=='undefined'?window:globalThis);
