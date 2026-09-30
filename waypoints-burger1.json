@@ -1,0 +1,37 @@
+{
+  "robot": "burger1",
+  "frame": "map",
+  "position_unit": "m",
+  "yaw_unit": "deg",
+  "source": "https://rorobot.atlassian.net/wiki/spaces/robot3/pages/24412161",
+  "waypoints": [
+    {
+      "number": 1,
+      "x": 0.42062385,
+      "y": 0.036671807,
+      "yaw": 90.760873754,
+      "mode": "forward"
+    },
+    {
+      "number": 2,
+      "x": 0.43906513,
+      "y": 0.360654172,
+      "yaw": 90.760873754,
+      "mode": "forward"
+    },
+    {
+      "number": 3,
+      "x": 0.42062385,
+      "y": -0.163328193,
+      "yaw": 0.0,
+      "mode": "forward"
+    },
+    {
+      "number": 4,
+      "x": 0.42062385,
+      "y": -0.348328193,
+      "yaw": 0.0,
+      "mode": "forward"
+    }
+  ]
+}

@@ -21,7 +21,7 @@ class TeamPackageTest(unittest.TestCase):
                 self.assertTrue(all(x.startswith('robot3_host/') and '..' not in Path(x).parts for x in names))
                 z.extractall(tmp)
             root=Path(tmp)/'robot3_host'
-            for name in ['README.md','REAL_ROBOT_SETUP.md','NAVIGATION_POLICY.md','config/system-config.json','config/SYSTEM_CONFIG_GUIDE.md','robot3_interfaces/action/README.md','robot3_interfaces/msg/README.md','robot3_orchestrator/README.md','robot3_web_bridge/README.md','robot3_mock_devices/README.md','launch/README.md','tests/README.md','web/index.html','web/dashboard.css','web/ros-config.js','web/ros-client.js','web/ROS_BRIDGE_GUIDE.md','web/assets/vendor/roslib-1.4.1.min.js','web/assets/vendor/ROSLIB-LICENSE.txt','web/admin.html','web/control.html','web/control.css','web/control.js','web/HOST_CONTROL_GUIDE.md','web/host/live_control.py','web/downloads.html','web/downloads.css','web/host/server.py','web/assets/full-map.jpg']:
+            for name in ['README.md','REAL_ROBOT_SETUP.md','NAVIGATION_POLICY.md','config/system-config.json','config/SYSTEM_CONFIG_GUIDE.md','robot3_interfaces/action/README.md','robot3_interfaces/msg/README.md','robot3_orchestrator/README.md','robot3_web_bridge/README.md','robot3_mock_devices/README.md','launch/README.md','tests/README.md','web/index.html','web/dashboard.css','web/ros-config.js','web/ros-client.js','web/ROS_BRIDGE_GUIDE.md','web/assets/vendor/roslib-1.4.1.min.js','web/assets/vendor/ROSLIB-LICENSE.txt','web/admin.html','web/control.html','web/control.css','web/control.js','web/HOST_CONTROL_GUIDE.md','web/host/live_control.py','web/downloads.html','web/downloads.css','web/waypoints.html','web/waypoints.css','web/waypoints.js','web/waypoints-burger1.json','web/assets/waypoints-burger1-source.png','web/host/server.py','web/assets/full-map.jpg']:
                 self.assertTrue((root/name).is_file(),name)
             self.assertFalse((root/'web/system-config.json').exists(),'Only one canonical system config')
             cfgpath=root/'config/system-config.json'
@@ -40,12 +40,14 @@ s=server.make_server(0)
 threading.Thread(target=s.serve_forever,daemon=True).start()
 try:
  base=f'http://127.0.0.1:{s.server_port}'
- for name in ['/','/admin.html','/control.html','/control.css','/control.js','/HOST_CONTROL_GUIDE.md','/downloads.html','/downloads.css','/dashboard.css','/ros-config.js','/ros-client.js','/assets/vendor/roslib-1.4.1.min.js','/engine.js','/assets/full-map.jpg']:
+ for name in ['/','/admin.html','/control.html','/control.css','/control.js','/HOST_CONTROL_GUIDE.md','/downloads.html','/downloads.css','/waypoints.html','/waypoints.css','/waypoints.js','/waypoints-burger1.json','/assets/waypoints-burger1-source.png','/dashboard.css','/ros-config.js','/ros-client.js','/assets/vendor/roslib-1.4.1.min.js','/engine.js','/assets/full-map.jpg']:
   assert urlopen(base+name).status==200,name
  c=json.load(urlopen(base+'/system-config.json'))
  assert c['order']['quantity_max']==5
  assert c['order']['quantity_default']==3
  assert b'quantity_default' in urlopen(base+'/system-policy.js').read()
+ w=json.load(urlopen(base+'/waypoints-burger1.json'))
+ assert len(w['waypoints'])==4 and w['waypoints'][1]['y']==0.360654172
  def post(action,data):
   req=Request(base+'/api/'+action,json.dumps({'client_id':'package-test','message_id':action,**data}).encode(),{'Content-Type':'application/json','Origin':base})
   return json.load(urlopen(req))
