@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Robot3 · Host 관제</title><link rel="stylesheet" href="styles.css?v=20260929-admin"><link rel="stylesheet" href="control.css?v=20261001-live"></head>
+<body>
+<header class="topbar"><a class="brand" href="./"><span class="brand-icon">R<span>3</span></span><strong>ROBOT3<span>FACTORY LAB</span></strong></a><nav class="control-nav" aria-label="페이지"><a href="./">시뮬레이션</a><a href="downloads.html">다운로드</a></nav></header>
+<main class="control-main">
+<div class="control-heading"><div><p class="eyebrow">HOST PC · LIVE CONTROL</p><h1>장치 <span>관제</span></h1><p>지도 애니메이션 없이 Host가 보고한 장치 결과와 다음 단계 조건만 표시합니다.</p></div><span id="bridge-pill" class="bridge-pill">Host 연결 확인 중</span></div>
+<div id="control-alert" class="control-alert" role="status" aria-live="polite">로컬 Host 서버에 연결 중입니다.</div>
+<div class="control-grid">
+<section class="control-card order-card" aria-labelledby="order-heading"><div class="card-head"><div><p class="eyebrow">ORDER</p><h2 id="order-heading">주문·단계</h2></div><strong id="order-status" class="status-tag">주문 없음</strong></div><div class="order-fields"><label>제품<strong>A제품 · 부품 3개</strong></label><label>주문 수량<input id="quantity" type="number" min="1" max="20" value="2" step="1"></label></div><div class="control-actions"><button id="start-order" class="control-primary" disabled>주문 시작</button><button id="next-stage" disabled>다음 단계</button><button id="pause-order" disabled>일시정지</button></div><p id="order-id" class="subtle">주문 ID —</p><div class="stage-line"><span>현재 단계</span><strong id="stage-number">—</strong></div><div class="counters"><div><span>운송 잔여</span><strong id="transport-count">—</strong></div><div><span>완제품 잔여</span><strong id="product-count">—</strong></div><div><span>적재 완료</span><strong id="completed-count">—</strong></div></div><p id="command-note" class="subtle">Host 어댑터의 작업 결과를 기다립니다.</p></section>
+<section class="control-card device-card" aria-labelledby="device-heading"><div class="card-head"><div><p class="eyebrow">DEVICES</p><h2 id="device-heading">장치 통신 상태</h2></div><small>Host 보고 기준</small></div><div id="device-list" class="device-list"></div></section>
+<section class="control-card condition-card" aria-labelledby="condition-heading"><div class="card-head"><div><p class="eyebrow">INTERLOCK</p><h2 id="condition-heading">다음 단계 조건</h2></div><span id="advance-tag">확인 대기</span></div><ul id="condition-list" class="condition-list"><li>Host의 완료 조건 보고를 기다립니다.</li></ul><p>초록색 조건이 모두 충족되고 Host가 다음 단계 가능을 보고해야 버튼이 활성화됩니다.</p></section>
+<section class="control-card log-card" aria-labelledby="log-heading"><div class="card-head"><div><p class="eyebrow">HOST LOG</p><h2 id="log-heading">최근 기록</h2></div></div><ol id="live-log"><li>Host 보고 대기</li></ol></section>
+</div>
+<p class="control-footnote">이 페이지는 실제 장치의 완료를 임의로 만들지 않습니다. ROS 2 Host 어댑터가 연결되기 전에는 장치 상태를 알 수 없고 주문 지시도 비활성화됩니다. <a href="HOST_CONTROL_GUIDE.md">연결 계약·실행 안내 ↗</a></p>
+</main>
+<script src="control.js?v=20261001-live"></script>
+</body></html>

@@ -73,3 +73,7 @@ python3 host/package.py
 ## 새 다운로드 패키지 경로
 
 최신 ZIP 루트는 `robot3_host/`입니다. 전체 개발 안내는 루트 README.md를 확인하세요. 위 문서의 프로젝트 루트는 패키지에서는 `web/`에 해당하므로, ZIP 루트에서 실행할 때 `python3 web/host/server.py`를 사용합니다. 시스템 설정 원본은 `config/system-config.json`, 시뮬레이션 속도 설정은 `web/config.js`입니다.
+
+## 실장치 관제 화면
+
+`http://127.0.0.1:8082/control.html`은 별도 실장치 관제 페이지입니다. 기존 `/?host=1`의 시뮬레이션 시간표/웹 ACK를 사용하지 않습니다. 현재는 화면과 Host 어댑터용 상태·명령 API만 제공하며, 실제 ROS 2 Action 어댑터는 구현 전입니다. [연결 계약](../HOST_CONTROL_GUIDE.md)을 참고하세요.

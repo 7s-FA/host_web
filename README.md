@@ -90,6 +90,10 @@
 
 기본값은 루트 `config.js`에서 유지보수합니다. Host는 서버 시간표에 대응하는 설정을 사용하며, 변경 후 `node host/build_scenarios.cjs` 실행과 서버 재시작이 필요합니다. 상세 절차와 필드 설명은 [CONFIG_GUIDE.md](CONFIG_GUIDE.md)를 참고하세요.
 
+## Host 실장치 관제 화면
+
+[Host 관제](control.html)는 지도·시뮬레이션 엔진 없이 주문, 5개 장치 상태, 완료 조건, 카운트와 최근 Host 기록을 표시합니다. 공개 Pages에서는 미연결 안내만 보이며, Host PC에서 `python3 host/server.py`를 실행한 뒤 `http://127.0.0.1:8082/control.html`로 접속합니다. 실제 ROS 2 장치와 통신하려면 팀의 Host 어댑터가 ROS Action 결과를 검증한 후 [관제 API 계약](HOST_CONTROL_GUIDE.md)대로 상태를 보고하고 명령을 수락해야 합니다. 현재 패키지에 그 ROS 실행부는 아직 없습니다. 다음 단계 버튼은 어댑터가 모든 선행 조건 완료를 보고할 때만 활성화됩니다.
+
 ## Host 시스템 설정
 
 주문 수량 범위·기본값, ROS 2 장치 주소, 작업 명령, 완료 판정, 다음 명령 조건은 **system-config.json**에서 관리합니다. [SYSTEM_CONFIG_GUIDE.md](SYSTEM_CONFIG_GUIDE.md)에 수정 위치와 적용 여부를 정리했습니다. `python3 host/system_config.py --write-web-policy`로 검증·웹 수량 정책을 생성한 뒤 Host를 재시작하세요. ROS 실행부는 아직 구현 전이며 해당 통신·완료 규칙은 연결 예정 설정입니다.
