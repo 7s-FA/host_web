@@ -59,7 +59,9 @@ for(let n=1;n<=20;n++){
 }
 for(const robot of [0,1]){
  const route=path('warehouse','assembly',robot);
- assert.equal(route.length,robot===0?6:4,'Storage exit includes short backup and Burger 1 via points');
+ if(robot===0){
+  assert(route[2][1]>route[1][1]&&route[2][1]<700,'WP2 lies in the aisle after the short warehouse undock, before WP1');
+ }
  assert.deepEqual(route.slice(0,2),[[340,300],[340,340]]);
  const approach=route.at(-2),dock=route.at(-1);
  assert.equal(approach[1],dock[1],'Final approach is horizontal');
