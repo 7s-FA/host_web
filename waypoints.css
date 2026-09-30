@@ -9,3 +9,6 @@
 @media(max-width:650px){.waypoint-actions{flex-wrap:wrap}.data-download,.file-button{font-size:12px}.source-drawing{padding:5px}.source-image-link{font-size:11px}}
 .waypoint-notes p:first-child{grid-column:1/-1;border-color:#e6d5b9;background:#fff9ef}.waypoint-notes p:first-child strong{color:#885724}
 .waypoint-row small{font-size:12px;line-height:1.45;font-variant-numeric:tabular-nums}
+
+.waypoint-routes{background:#fff;border:1px solid #d7e2e8;border-radius:13px;overflow:hidden;margin-top:16px}.route-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:15px}.route-row{border:1px solid #dce8ec;border-radius:9px;background:#f7fafb;padding:12px}.route-row strong{display:block;font-size:13px}.route-row code{display:block;font-size:16px;font-weight:800;color:#246787;margin-top:6px;white-space:normal}.waypoint-routes>p{margin:0;padding:0 17px 16px;color:#607785;font-size:12px;line-height:1.6}
+@media(max-width:900px){.route-list{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:650px){.route-list{grid-template-columns:1fr}}
