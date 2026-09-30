@@ -14,6 +14,7 @@ for name in ['config','settings','system-policy','ros-config','ros-client']:
 html=html.replace('<script src="assets/vendor/roslib-1.4.1.min.js"></script>', '<script>'+(root/'assets/vendor/roslib-1.4.1.min.js').read_text()+'</script>')
 html=html.replace('href="admin.html"','href="https://7s-fa.github.io/host_web/admin.html"')
 html=html.replace('href="downloads.html"','href="https://7s-fa.github.io/host_web/downloads.html"')
+html=html.replace('href="control.html"','href="https://7s-fa.github.io/host_web/control.html"')
 for key,data in photos.items():
     html=html.replace('src="assets/'+key+'.jpg"','src="'+data+'"')
 html=re.sub(r'<script src="engine\.js(?:\?[^"]*)?"></script>',lambda _: '<script>window.EMBEDDED_PHOTOS='+json.dumps(photos)+';</script><script>'+(root/'engine.js').read_text()+'</script>',html)

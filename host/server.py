@@ -3,6 +3,7 @@ import argparse
 import sys
 import json
 import mimetypes
+import os
 import secrets
 import threading
 import time
@@ -14,6 +15,7 @@ from urllib.parse import urlsplit, parse_qs
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'host'))
 from system_config import load as load_system_config
+from live_control import LiveControl
 SYSTEM_CONFIG = load_system_config()
 SCENARIOS = json.loads((ROOT / 'host/scenarios.json').read_text())
 
@@ -171,6 +173,15 @@ class Handler(BaseHTTPRequestHandler):
         if not self.valid_host():
             return self.reply(403, {'error': '로컬 호스트 주소만 허용합니다.'})
         path = urlsplit(self.path).path
+        if path == '/api/live/state':
+            with self.server.lock:
+                return self.reply(200, self.server.live.state())
+        if path == '/api/live/commands':
+            try:
+                with self.server.lock:
+                    return self.reply(200, self.server.live.pending(self.headers.get('X-Bridge-Token')))
+            except PermissionError as e:
+                return self.reply(403, {'error': str(e)})
         if path == '/api/state':
             with self.server.lock:
                 return self.reply(200, self.server.host.state())
@@ -180,7 +191,7 @@ class Handler(BaseHTTPRequestHandler):
             script = 'window.SYSTEM_ORDER_POLICY = ' + json.dumps(self.server.host.config['order']) + ';'
             return self.reply(200, script.encode(), 'text/javascript')
         name = path.lstrip('/') or 'index.html'
-        allowed = name in {'index.html', 'styles.css', 'dashboard.css', 'app.js', 'engine.js', 'host-client.js', 'ros-config.js', 'ros-client.js', 'ROS_BRIDGE_GUIDE.md', 'config.js', 'settings.js', 'admin.html', 'admin.js', 'admin.css', 'downloads.html', 'downloads.css', 'system-config.json'} or (name.startswith('assets/') and '..' not in name)
+        allowed = name in {'index.html', 'styles.css', 'dashboard.css', 'app.js', 'engine.js', 'host-client.js', 'ros-config.js', 'ros-client.js', 'ROS_BRIDGE_GUIDE.md', 'config.js', 'settings.js', 'admin.html', 'admin.js', 'admin.css', 'downloads.html', 'downloads.css', 'control.html', 'control.css', 'control.js', 'HOST_CONTROL_GUIDE.md', 'system-config.json'} or (name.startswith('assets/') and '..' not in name)
         target = (ROOT / name).resolve()
         if not allowed or not target.is_relative_to(ROOT) or not target.is_file():
             return self.reply(404, {'error': '파일 없음'})
@@ -192,7 +203,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(403, {'error': '동일 호스트의 JSON 요청만 허용합니다.'})
         try:
             length = int(self.headers.get('Content-Length', '0'))
-            if not 0 < length <= 8192:
+            limit = 32768 if urlsplit(self.path).path == '/api/live/report' else 8192
+            if not 0 < length <= limit:
                 raise ValueError('잘못된 요청 크기')
             data = json.loads(self.rfile.read(length))
             if not isinstance(data, dict):
@@ -201,8 +213,15 @@ class Handler(BaseHTTPRequestHandler):
             if not path.startswith('/api/'):
                 return self.reply(404, {'error': 'API 없음'})
             with self.server.lock:
-                state = self.server.host.handle(path[5:], data)
+                if path == '/api/live/report':
+                    state = self.server.live.update(data, self.headers.get('X-Bridge-Token'))
+                elif path.startswith('/api/live/'):
+                    state = self.server.live.issue(path.removeprefix('/api/live/'), data)
+                else:
+                    state = self.server.host.handle(path[5:], data)
             return self.reply(200, state)
+        except PermissionError as e:
+            return self.reply(403, {'error': str(e)})
         except (ValueError, TypeError) as e:
             return self.reply(400, {'error': str(e)})
 
@@ -211,7 +230,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def make_server(port=8082):
     server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
-    server.host, server.lock = Host(), threading.Lock()
+    server.host, server.live, server.lock = Host(), LiveControl(os.environ.get('ROBOT3_BRIDGE_TOKEN', ''), timeout=SYSTEM_CONFIG['ros2']['heartbeat_timeout_seconds'], order_policy=SYSTEM_CONFIG['order']), threading.Lock()
     return server
 
 if __name__ == '__main__':
@@ -220,6 +239,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     with make_server(args.port) as server:
         print(f'Host PC 시험 화면: http://127.0.0.1:{server.server_port}/?host=1', flush=True)
+        print(f'실장치 관제 화면: http://127.0.0.1:{server.server_port}/control.html', flush=True)
         print(f'목적지 단위 v2 · A제품 2개: {len(SCENARIOS["2"])}단계 · {ROOT}', flush=True)
         print('Ctrl+C로 종료 · git pull 후에는 서버를 종료하고 다시 실행하세요.', flush=True)
         try:

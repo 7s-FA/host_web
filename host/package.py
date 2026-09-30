@@ -3,7 +3,7 @@ from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 root = Path(__file__).resolve().parent.parent
 prefix = 'robot3_host/'
-web_names = ['dashboard.css','ros-config.js','ros-client.js','ROS_BRIDGE_GUIDE.md','system-policy.js','CONFIG_GUIDE.md','config.js','settings.js','admin.html','admin.js','admin.css','downloads.html','downloads.css','host/scenario-config.json','host/build_scenarios.cjs','index.html','styles.css','app.js','engine.js','host-client.js','host/server.py','host/system_config.py','host/scenarios.json','host/README.md']
+web_names = ['dashboard.css','control.html','control.css','control.js','HOST_CONTROL_GUIDE.md','ros-config.js','ros-client.js','ROS_BRIDGE_GUIDE.md','system-policy.js','CONFIG_GUIDE.md','config.js','settings.js','admin.html','admin.js','admin.css','downloads.html','downloads.css','host/scenario-config.json','host/build_scenarios.cjs','index.html','styles.css','app.js','engine.js','host-client.js','host/server.py','host/live_control.py','host/system_config.py','host/scenarios.json','host/README.md']
 with ZipFile(root / 'host-test.zip', 'w', ZIP_DEFLATED) as z:
     for p in sorted((root / 'team-template').rglob('*')):
         if p.is_file():
