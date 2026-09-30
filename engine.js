@@ -5,7 +5,8 @@
   const POINTS = { home1:[110,700], home2:[110,795], waiting:[340,920], warehouse:[340,300], assembly:[400,750] };
   const DOCK_HEADINGS = {home:270,waiting:180,warehouse:0,assembly:90};
   // Conceptual positions on the portrait simulation map; metric map coordinates live in waypoints-burger1.json.
-  const WAYPOINTS = {1:[340,700],2:[340,340],3:[340,750],4:[360,750]};
+  // WP2 is midway along the warehouse aisle in the source sketch, separate from the 10 cm undock point.
+  const WAYPOINTS = {1:[340,700],2:[340,500],3:[340,750],4:[360,750]};
   const BURGER1_VIA = {
     'home:warehouse':[1,2], 'warehouse:assembly':[2,1,3,4],
     'assembly:waiting':[4,3], 'waiting:warehouse':[3,1,2],
