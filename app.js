@@ -55,13 +55,40 @@ Object.entries(RobotSimulation.WAYPOINTS).forEach(([id,point])=>{
  $('waypoint-markers').append(marker);
 });
 
+let navigationRobot=0,navigationPinned=false;
+for(const robot of [0,1])$('navigation-b'+(robot+1)).onclick=()=>{navigationRobot=robot;navigationPinned=true;render();};
+function renderNavigation(s){
+ const active=s.active.filter(t=>t.type==='move');
+ if(!navigationPinned&&active.length&&!active.some(t=>t.actor===navigationRobot))navigationRobot=active[0].actor;
+ for(const robot of [0,1])$('navigation-b'+(robot+1)).setAttribute('aria-pressed',String(navigationRobot===robot));
+ const task=plan?.tasks.filter(t=>t.type==='move'&&t.actor===navigationRobot&&t.start<=time).sort((a,b)=>b.start-a.start)[0];
+ const list=$('navigation-steps');
+ if(!task){
+  $('navigation-summary').textContent=`버거 ${navigationRobot+1} · 초기위치 대기`;
+  if(list.dataset.items!=='idle'){list.replaceChildren();list.dataset.items='idle';}
+  return;
+ }
+ const nav=RobotSimulation.navigationState(task,time),current=nav.steps[nav.index];
+ $('navigation-summary').textContent=nav.done?'IR 정지 완료 · 도착 완료 회신':`${nav.index+1}/${nav.steps.length} · ${current.label} · ${current.controller}`;
+ const key=JSON.stringify([task.id,nav.index,nav.steps.map(step=>step.done)]);
+ if(list.dataset.items===key)return;
+ list.replaceChildren(...nav.steps.map((step,index)=>{
+  const li=document.createElement('li');li.className=step.done?'navigation-done':index===nav.index?'navigation-current':'';
+  const dot=document.createElement('i');dot.setAttribute('aria-hidden','true');
+  const label=document.createElement('span');label.textContent=`${index+1}. ${step.label}`;
+  const state=document.createElement('small');state.textContent=step.done?'완료':index===nav.index?'실행 중':'대기';
+  li.title=`${step.controller} · 다음 단계 조건: ${step.condition} · 웹 모의 신호`;
+  li.append(dot,label,state);return li;
+ }));list.dataset.items=key;
+}
+
 function formatTime(t){return `${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`;}
 function quantityPolicy(){return HostBridge.enabled&&HostBridge.state?.order_policy||window.SYSTEM_ORDER_POLICY||{quantity_min:1,quantity_max:20};}
 function validateQuantity(){const n=Number($('quantity').value),p=quantityPolicy();if(!Number.isInteger(n)||n<p.quantity_min||n>p.quantity_max)throw Error(`주문 수량을 ${p.quantity_min}~${p.quantity_max} 사이의 정수로 입력해 주세요.`);return n;}
 function setPhoto(key){if(currentPhoto!==key||!$('scene-image').getAttribute('src')){$('scene-image').src=photoPath(key);currentPhoto=key;}$('scene-image').alt=photos[key].title;}
 function openPhoto(key){$('dialog-image').src=photoPath(key);$('dialog-image').alt=photos[key].title;$('dialog-title').textContent=photos[key].title;$('dialog-description').textContent=photos[key].detail;$('photo-dialog').showModal();}
 function begin(run=true){manualMode=false;manualTarget=null;if(HostBridge.enabled){try{HostBridge.start(validateQuantity());}catch(e){$('form-error').textContent=e.message;}return;}try{plan=RobotSimulation.makePlan(validateQuantity(),SimulationSettings.read().config);stages=RobotSimulation.stagesFor(plan.quantity,plan.config);time=0;playing=run;following=true;lastEventKey='';$('form-error').textContent='';render();}catch(e){$('form-error').textContent=e.message;}}
-function reset(){if(HostBridge.enabled)return;plan=null;manualMode=false;manualTarget=null;stages=[];time=0;playing=false;following=true;lastEventKey='';setPhoto('full-map');render();}
+function reset(){if(HostBridge.enabled)return;navigationPinned=false;navigationRobot=0;plan=null;manualMode=false;manualTarget=null;stages=[];time=0;playing=false;following=true;lastEventKey='';setPhoto('full-map');render();}
 function step(direction){if(HostBridge.enabled)return;manualMode=false;manualTarget=null;if(!plan){begin(false);return;}playing=false;const times=[...new Set(plan.events.map(e=>e.time))];time=direction>0?(times.find(t=>t>time+0.001)??plan.duration):([...times].reverse().find(t=>t<time-0.001)??0);render();}
 function togglePlay(){if(HostBridge.enabled)return;if(manualMode){if(playing){playing=false;render();}else runStage();return;}if(!plan){begin();return;}if(time>=plan.duration){time=0;lastEventKey='';}playing=!playing;render();}
 async function runStage(){
@@ -94,7 +121,7 @@ $('photo-dialog').onclick=e=>{if(e.target===$('photo-dialog'))$('photo-dialog').
 document.querySelectorAll('[data-photo]').forEach(el=>{const activate=()=>{following=false;setPhoto(el.dataset.photo);render();openPhoto(el.dataset.photo);};el.addEventListener('click',activate);el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();activate();}});});
 document.querySelectorAll('[data-tab]').forEach(button=>button.onclick=()=>{document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b===button));$('simulation-view').hidden=button.dataset.tab!=='simulation';$('gallery-view').hidden=button.dataset.tab!=='gallery';});
 Object.entries(photos).forEach(([key,data])=>{const card=document.createElement('button');card.className='gallery-card';card.innerHTML=`<img src="${photoPath(key)}" alt="${data.title}" loading="lazy"><div><h3>${data.title} ↗</h3><p>${data.detail}</p></div>`;card.onclick=()=>openPhoto(key);$('gallery-grid').append(card);});
-$('export').onclick=()=>{if(!plan)return;const s=RobotSimulation.snapshot(plan,time);const data={product:'A',ordered:plan.quantity,simulationTime:time,transportRemaining:s.transport,productRemaining:s.remaining,completed:s.completed,events:s.events.map(({time,kind,text,robot,job})=>({time,kind,text,robot:robot==null?null:`burger${robot+1}`,productNumber:job==null?null:job+1}))};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='robot3-simulation-log.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+$('export').onclick=()=>{if(!plan)return;const s=RobotSimulation.snapshot(plan,time);const data={product:'A',ordered:plan.quantity,simulationTime:time,transportRemaining:s.transport,productRemaining:s.remaining,completed:s.completed,events:s.events.map(({time,kind,text,robot,job,phase,controller})=>({time,kind,text,phase,controller,robot:robot==null?null:`burger${robot+1}`,productNumber:job==null?null:job+1}))};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='robot3-simulation-log.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 document.addEventListener('keydown',e=>{if(['INPUT','SELECT','BUTTON','TEXTAREA'].includes(e.target.tagName)||$('photo-dialog').open||$('detail-dialog').open)return;if(e.code==='Space'){e.preventDefault();togglePlay();}if(e.code==='ArrowRight'){e.preventDefault();step(1);}if(e.code==='ArrowLeft'){e.preventDefault();step(-1);}});
 function getScene(s){
  if(s.done)return {key:'pallet',kicker:'ORDER COMPLETE',title:'A제품 주문 완료',detail:`완제품 ${plan.quantity}개가 파렛트에 적재됐고, 버거 1·2가 모두 초기위치로 돌아왔습니다.`};
@@ -103,6 +130,7 @@ function getScene(s){
  const p=f.job==null?'':`제품 #${f.job+1} · `;
  if(f.type==='move'&&s.robots[f.actor].parking)return {key:'waiting',kicker:'FORWARD PARKING',title:`버거 ${f.actor+1} · 전진 주차`,detail:'대기 박스 안으로 전진하고, 후방 적외선 센서가 검은 감지선을 감지하면 정지합니다. 대기장소에는 ArUco 마커가 없습니다.'};
  if(f.type==='move'&&s.robots[f.actor].reversing)return {key:'route',kicker:'LOCAL UNDOCK · 10 CM',title:`버거 ${f.actor+1} · 도킹 위치 10cm 후진`,detail:'도킹 위치에서 로컬 cmd_vel로 10cm 후진·정지한 뒤 180° 회전합니다. 이후 Nav2 전진 주행으로 전환합니다. 화면의 이동 거리는 개념 표시입니다.'};
+ if(f.type==='move'&&s.robots[f.actor].navigation?.steps[s.robots[f.actor].navigation.index]?.code==='ARUCO_DOCK')return {key:f.to==='warehouse'?'warehouse':f.to==='home'?'home':'process',kicker:'ARUCO DOCKING · SIMULATED',title:`버거 ${f.actor+1} · ArUco 정렬·전진`,detail:'Nav2 경유점에 도착했습니다. 전방 카메라로 ArUco 마커를 추종하며 정렬·전진하고, 후방 IR 센서가 감지선을 감지하면 정지한 뒤 Host에 도착 완료를 회신합니다. 화면은 모의 동작입니다.'};
  if(f.type==='move'&&s.robots[f.actor].turning)return {key:'route',kicker:'TURNING IN PLACE',title:`버거 ${f.actor+1} · 제자리 회전`,detail:'이동을 멈추고 다음 주행 방향으로 차체를 돌립니다. 방향 정렬이 끝나면 직선 주행을 시작합니다.'};
  if(f.type==='assemble')return {key:'assembly',kicker:'ASSEMBLY IN PROGRESS',title:`${p}티칭 조립`,detail:'로봇팔 2가 A지그에서 조립합니다. 다음 주문이 있으면 다른 버거가 자재창고에서 부품을 준비합니다.'};
  if(f.type==='load')return {key:'loading',kicker:'LOADING 3 PARTS',title:`버거 ${f.robot+1} · 부품 적재`,detail:`${p}로봇팔 1이 부품 3개를 차례로 싣습니다. 적재가 모두 끝나야 제작공정으로 이동할 수 있습니다.`};
@@ -171,7 +199,7 @@ function renderConditions(){
 }
 function render(){
  const s=plan?RobotSimulation.snapshot(plan,time):{...RobotSimulation.snapshot(idlePlan,0),events:[],active:[],robots:[0,1].map(id=>({id,position:RobotSimulation.POINTS['home'+(id+1)],parts:0,heading:RobotSimulation.DOCK_HEADINGS.home,status:'초기위치 대기'})),linear:0,arms:['대기','대기','대기'],done:false};
- renderCurrentStage(s);renderConditions();
+ renderCurrentStage(s);renderConditions();renderNavigation(s);
  $('total').textContent=plan?plan.quantity:'—';$('transport').textContent=plan?s.transport:'—';$('remaining').textContent=plan?s.remaining:'—';$('completed').textContent=plan?s.completed:0;
  const percent=plan?Math.round(s.completed/plan.quantity*100):0;$('completion-percent').textContent=percent+'%';$('completion-bar').style.width=percent+'%';$('pallet-count').textContent=(plan?s.completed:0)+'개 적재';
  $('run-status').textContent=!plan?'주문 대기':s.done?'주문 완료':playing?'시뮬레이션 진행 중':manualMode&&time>=manualTarget?'다음 단계 실행 대기':'일시정지';
