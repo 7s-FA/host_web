@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#17242d"><title>Robot3 · 공정 시뮬레이션</title><link rel="stylesheet" href="styles.css?v=20260929-admin"><link rel="stylesheet" href="dashboard.css?v=20260930-compact"></head>
+<body>
+<header class="topbar"><a class="brand" href="./" aria-label="Robot3 홈"><span class="brand-icon">R<span>3</span></span><strong>ROBOT3<span>FACTORY LAB</span></strong></a><nav aria-label="페이지"><button class="nav active" data-tab="simulation">공정 시뮬레이션</button><button class="nav" data-tab="gallery">현장 사진 <span>09</span></button><a class="nav" href="admin.html" style="display:flex;align-items:center">관리자 설정</a></nav><span class="demo-badge"><i></i> 시나리오 데모</span></header>
+<main>
+<div class="heading"><div><p class="eyebrow">ROBOT3 · 1차 목표</p><h1>공정 관제</h1></div><div class="dashboard-actions"><span class="dashboard-context">A제품 · 버거 2대 · 로봇팔 3대</span><button id="open-details" type="button" class="detail-button">상세·기록 ↗</button><a class="package-link" href="downloads.html">다운로드·사용법 ↗</a></div></div>
+<section id="simulation-view">
+<div class="simulation-layout"><div class="simulation-main">
+<section class="map-panel"><div class="panel-heading"><div><span class="section-number">01</span><h2>공정 시뮬레이션</h2></div><div class="legend"><span><i class="blue"></i>버거 1</span><span><i class="orange"></i>버거 2</span><span class="map-scale">현장 배치도</span></div></div>
+<div class="map-stage-layout">
+<aside class="current-stage" aria-label="현재 공정 단계">
+<p class="eyebrow">CURRENT STEP</p><h3>현재 단계</h3>
+<div class="stage-live" aria-live="polite" aria-atomic="true"><span id="stage-status" class="stage-status">주문 대기</span><p id="stage-number" class="stage-number">자동 시뮬레이션</p><h4 id="stage-title">주문을 기다리고 있어요</h4><p id="stage-detail">수량을 입력하고 주문을 시작하세요.</p></div>
+
+<section class="stage-conditions" tabindex="0" aria-label="다음 단계 완료 조건 목록"><strong id="conditions-title">다음 단계 전환 조건</strong><ul id="conditions-list" aria-live="polite"></ul></section>
+
+</aside>
+<div class="map-wrapper"><svg id="factory-map" viewBox="0 0 680 1060" role="img" aria-labelledby="map-title map-desc"><title id="map-title">Robot3 공정 이동 시뮬레이션</title><desc id="map-desc">사용자가 지정한 방향으로 왼쪽 아래 초기위치, 중앙 위 자재창고, 오른쪽 아래 제작공정을 배치했습니다. 중앙 통로와 아래쪽 대기장소가 연결됩니다. 치수와 이동 시간은 설명용입니다.</desc><defs><pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".75" fill="#d4dde2"/></pattern><filter id="shadow"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-opacity=".12"/></filter><g id="robot-shape"><rect x="-23" y="-16" width="7" height="30" rx="3" fill="#273a47"/><rect x="16" y="-16" width="7" height="30" rx="3" fill="#273a47"/><rect x="-18" y="-22" width="36" height="42" rx="9" fill="white" stroke="currentColor" stroke-width="3"/><rect x="-12" y="-15" width="24" height="23" rx="3" fill="currentColor" opacity=".12"/><circle cy="-8" r="6" fill="#273a47"/><path d="M-9 -27 L0 -43 L9 -27" fill="currentColor"/></g><g id="arm-shape"><rect x="-17" y="-8" width="34" height="16" rx="5" fill="#31444e"/><path d="M0 0 L-19 -24 L2 -43 L24 -39" fill="none" stroke="currentColor" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><circle cx="-19" cy="-24" r="5" fill="#263b46"/><circle cx="2" cy="-43" r="4" fill="#263b46"/><path d="M24 -44 v12 m0 -12 h8 m-8 12 h8" fill="none" stroke="#263b46" stroke-width="3"/></g></defs>
+<rect width="680" height="1060" fill="#f1f3f2"/>
+<rect x="20" y="20" width="640" height="1020" rx="8" fill="url(#grid)" stroke="#d6dddf"/>
+<!-- Photo topology, oriented as specified: storage above, home bottom-left,
+     production bottom-right, waiting bay off the central junction. -->
+<path d="M280 295 V640 H50 V850 H280 V975 H400 V850 H435 M400 295 V640 H435" fill="none" stroke="#c8d0d1" stroke-width="12"/>
+<path d="M280 295 V640 H50 V850 H280 V975 H400 V850 H435 M400 295 V640 H435" fill="none" stroke="#fff" stroke-width="8"/>
+<path class="road-dash" d="M340 300 V920 M110 700 H340 M110 795 H340 M340 750 H400"/>
+<text x="340" y="485" text-anchor="middle" class="route-label">운반 통로</text>
+<text x="340" y="510" text-anchor="middle" class="zone-sub">자재창고 ↕ 교차 통로</text>
+<g class="station" tabindex="0" role="button" aria-label="자재창고 사진 보기" data-photo="warehouse">
+ <rect x="225" y="65" width="230" height="185" rx="5" fill="#fff" stroke="#c9d5dc" stroke-width="2"/>
+ <text x="340" y="48" text-anchor="middle" class="zone-title">자재창고</text>
+ <g stroke="#d2d7d9" fill="#f4f5f1"><rect x="245" y="90" width="34" height="32" rx="2"/><rect x="287" y="90" width="34" height="32" rx="2"/><rect x="245" y="129" width="34" height="32" rx="2"/><rect x="287" y="129" width="34" height="32" rx="2"/><rect x="245" y="168" width="34" height="32" rx="2"/><rect x="287" y="168" width="34" height="32" rx="2"/></g>
+ <circle cx="262" cy="106" r="9" fill="#a28ac2"/><circle cx="304" cy="145" r="9" fill="#639cbc"/><rect x="294" y="96" width="20" height="20" rx="2" fill="#eaa452"/>
+ <g id="arm1-map" transform="translate(391 179)" color="#589299"><use href="#arm-shape"/></g>
+ <text x="391" y="211" text-anchor="middle" class="zone-sub">로봇팔 1</text>
+ <text x="340" y="238" text-anchor="middle" class="zone-sub">부품 3개 적재</text>
+ <path d="M308 263 V337 H372 V263" fill="none" stroke="#b9cbd4" stroke-width="2"/>
+ <text x="405" y="310" class="dock-label">적재 위치</text>
+</g>
+<g class="station" tabindex="0" role="button" aria-label="초기위치 사진 보기" data-photo="home">
+ <rect x="55" y="656" width="128" height="188" rx="5" fill="#fff" stroke="#c9d5dc"/>
+ <text x="119" y="621" text-anchor="middle" class="zone-title">초기위치</text>
+ <text x="119" y="643" text-anchor="middle" class="zone-sub">← B1 위 · B2 아래</text>
+ <path d="M143 668 H77 V736 H143 M143 763 H77 V831 H143" fill="none" stroke="#d7dfe4" stroke-width="3"/>
+</g>
+<g class="station" tabindex="0" role="button" aria-label="대기장소 사진 보기" data-photo="waiting">
+ <rect x="285" y="866" width="110" height="105" rx="3" fill="#fff6e2" stroke="#d4b77a" stroke-dasharray="6 4"/>
+ <text x="340" y="850" text-anchor="middle" class="zone-title">대기장소</text>
+ <text x="340" y="1030" text-anchor="middle" class="zone-sub">전진 주차 · 후진 후 회전 출차</text>
+</g>
+<path d="M373 717 H430 V787 H373" fill="none" stroke="#b9cbd4" stroke-width="2"/>
+
+<!-- Full-map photo: arm 2 at upper left, horizontal linear rail in the
+     middle, arm 3 lower right and pallet lower left on the same workboard. -->
+<g class="station" tabindex="0" role="button" aria-label="제작공정 사진 보기" data-photo="process">
+ <rect x="450" y="645" width="205" height="345" rx="5" fill="#fff" stroke="#c9d5dc" stroke-width="2"/>
+ <text x="550" y="621" text-anchor="middle" class="zone-title">제작공정</text>
+ <g id="arm2-map" transform="translate(508 724)" color="#589299"><use href="#arm-shape"/></g>
+ <text x="550" y="755" text-anchor="middle" class="zone-title small">로봇팔 2 · 조립</text>
+ <rect x="468" y="783" width="171" height="58" rx="3" fill="#e7ebea" stroke="#c1cccd"/>
+ <path d="M475 791 H632 M475 832 H632" stroke="#a0b2b6" stroke-width="6"/>
+ <rect x="586" y="797" width="36" height="30" rx="3" fill="#fff" stroke="#c7ceca"/>
+ <g id="jig" transform="translate(600 812)"><rect x="-21" y="-18" width="42" height="36" rx="3" fill="#f2b05d" stroke="#bb803a"/><text y="6" text-anchor="middle" font-size="18" font-weight="700" fill="#5f421d">A</text></g>
+ <text x="550" y="865" text-anchor="middle" class="zone-sub">리니어 모터 · A지그</text>
+ <g id="arm3-map" transform="translate(610 944)" color="#589299"><use href="#arm-shape"/></g>
+ <text x="600" y="976" text-anchor="middle" class="zone-title small">로봇팔 3</text>
+</g>
+<g class="station" tabindex="0" role="button" aria-label="파렛트 사진 보기" data-photo="pallet">
+ <rect x="470" y="889" width="73" height="60" rx="3" fill="#f8f4e8" stroke="#c8ba96"/>
+ <rect x="489" y="902" width="36" height="30" rx="2" fill="#fff" stroke="#d9c8a6"/>
+ <text x="507" y="923" text-anchor="middle" class="zone-sub">파렛트</text>
+ <text id="pallet-count" x="507" y="976" text-anchor="middle" class="zone-sub">0개 적재</text>
+</g>
+<g id="dock-cues" aria-label="대기장소를 제외한 ArUco 표식과 목표 위치별 후방 적외선 센서 검은 감지선"></g>
+<g id="robot1" color="#3576c5" filter="url(#shadow)"><g class="robot-body"><use href="#robot-shape"/><rect x="-9" y="19" width="18" height="4" rx="1" fill="#111"/><g class="cargo" transform="translate(-12 12)"></g></g><text y="49" text-anchor="middle" class="robot-label" fill="#24588f">버거 1</text></g>
+<g id="robot2" color="#d99032" filter="url(#shadow)"><g class="robot-body"><use href="#robot-shape"/><rect x="-9" y="19" width="18" height="4" rx="1" fill="#111"/><g class="cargo" transform="translate(-12 12)"></g></g><text y="49" text-anchor="middle" class="robot-label" fill="#966021">버거 2</text></g>
+</svg></div></div>
+<div class="transport-controls"><div class="play-buttons"><button id="previous" class="icon-button" aria-label="이전 이벤트"><svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><path d="M5 4v12M15 4l-8 6 8 6Z" fill="currentColor" stroke="currentColor" stroke-width="1.5"/></svg></button><button id="play" class="play-button" aria-label="재생 또는 일시정지">▶</button><button id="next" class="icon-button" aria-label="다음 이벤트"><svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><path d="M15 4v12M5 4l8 6-8 6Z" fill="currentColor" stroke="currentColor" stroke-width="1.5"/></svg></button><button id="reset" class="text-button">↺ 초기화</button></div><div class="scrubber"><span id="elapsed">00:00</span><input id="timeline" type="range" min="0" max="100" value="0" step="0.05" aria-label="시뮬레이션 진행 위치"><span id="duration">00:00</span></div><label class="speed-label">속도 <select id="speed" aria-label="재생 속도"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label></div>
+</section>
+<section class="devices"><div class="device" id="device-b1"><span class="device-icon blue-text">◉</span><div><strong>버거 1</strong><small>/burger1</small></div><span class="device-status">초기위치 대기</span><div class="part-dots" aria-label="적재 부품"></div></div><div class="device" id="device-b2"><span class="device-icon orange-text">◉</span><div><strong>버거 2</strong><small>/burger2</small></div><span class="device-status">초기위치 대기</span><div class="part-dots" aria-label="적재 부품"></div></div><div class="device" id="device-a1"><span class="device-icon">⌁</span><div><strong>로봇팔 1</strong><small>부품 적재</small></div><span class="device-status">대기</span></div><div class="device" id="device-a2"><span class="device-icon">⌁</span><div><strong>로봇팔 2</strong><small>티칭 조립</small></div><span class="device-status">대기</span></div><div class="device" id="device-a3"><span class="device-icon">⌁</span><div><strong>로봇팔 3</strong><small>파렛트 적재</small></div><span class="device-status">대기</span></div></section>
+</div>
+<aside class="host-console" aria-label="Host PC 주문 및 카운트 GUI">
+<div class="console-chrome"><div><span class="console-dot"></span><strong>HOST PC</strong><span>CONTROL PANEL</span></div><span class="console-mode">주문·통신</span></div>
+
+<div class="order-bar"><form id="order-form"><label class="product-field">제품<select id="product" aria-label="주문 제품"><option>A제품 · 부품 3개 / 세트</option></select></label><label class="quantity-field">주문 수량<div class="quantity"><button type="button" id="minus" aria-label="주문 수량 줄이기">−</button><input id="quantity" type="number" min="1" max="20" step="1" value="2" required aria-label="주문 수량"><button type="button" id="plus" aria-label="주문 수량 늘리기">+</button></div></label><button class="primary" id="start" type="submit"><span>▶</span> 주문 · 시작</button><button class="primary step-order" id="step-order" type="button">단계별 실행</button></form><div class="order-status"><span id="run-dot"></span><strong id="run-status">주문 대기</strong><small id="order-id">수량을 정하고 시작하세요</small></div></div>
+<p id="form-error" role="alert"></p>
+<div class="metrics"><article><span class="metric-label">주문 수량</span><div><strong id="total">—</strong><span>개</span></div><small>Host에서 설정한 A제품 수량</small></article><article><span class="metric-label"><i class="blue"></i> 운송 잔여</span><div><strong id="transport">—</strong><span>개</span></div><small>제작공정으로 출발하면 −1</small></article><article><span class="metric-label"><i class="orange"></i> 완제품 잔여</span><div><strong id="remaining">—</strong><span>개</span></div><small>파렛트 적재 성공 후 −1</small></article><article class="done-card"><span class="metric-label"><i class="green"></i> 적재 완료</span><div><strong id="completed">0</strong><span id="completed-unit">개</span><span id="completion-percent">0%</span></div><div class="small-progress"><i id="completion-bar"></i></div></article></div>
+
+<section class="host-test" aria-label="호스트 PC 통신 시험">
+<h3>연결 상태</h3>
+<p id="host-status" role="status">자동 재생 모드</p>
+
+<p id="ros-status" role="status">ROS 상태 송신 · 준비 중</p>
+<div class="connection-buttons"><button id="ros-connect" type="button" disabled>ROS 연결 / 재연결</button>
+<button id="host-connect" type="button">호스트 연결</button></div>
+
+<div class="host-test-actions"><button id="host-next" disabled>다음 단계</button><button id="host-pause" disabled>일시정지</button><button id="host-reset" disabled>시험 초기화</button></div>
+<label><input id="host-auto" type="checkbox" disabled> 완료 회신 후 자동으로 다음 단계</label>
+
+
+
+</section>
+
+<div class="console-footer"><span><i></i> SIMULATION MODE</span><span>ROBOT3 · HOST GUI</span></div></aside>
+</div></section>
+<section id="gallery-view" hidden><div class="gallery-heading"><h2>실제 공간으로 이해하는 공정</h2><p>공유해 주신 현장 사진 9장입니다. 사진을 누르면 확대할 수 있습니다.</p></div><div id="gallery-grid"></div></section>
+<footer><span><strong>ROBOT3</strong> · 1차 통합 시연</span><p>사진 기반 공정 시나리오 · 이동 경로와 소요 시간은 설명용이며 실제 로봇을 제어하지 않습니다.</p><a href="https://rorobot.atlassian.net/wiki/spaces/robot3/pages/edit-v2/19759106" target="_blank" rel="noopener">공정 목표 문서 ↗</a></footer>
+</main>
+<dialog id="detail-dialog" aria-labelledby="detail-title"><div class="detail-header"><div><p class="eyebrow">공정 참고 정보</p><h2 id="detail-title">상세·기록</h2></div><button id="close-details" type="button" aria-label="상세·기록 닫기">×</button></div><div class="detail-body"><section class="signal-detail"><h3>현재 작업·완료 신호</h3><div class="stage-work"><strong id="stage-work-label">장비 상태</strong><ul id="stage-work-list"><li>버거 1·2 초기위치 대기</li></ul></div><ul id="condition-signals"></ul><p id="conditions-note"></p></section><aside class="scene-panel"><div class="panel-heading"><div><span class="section-number">02</span><h2>지금 진행 중</h2></div><button id="follow" aria-pressed="true" class="follow active">자동</button></div><button id="photo-open" class="scene-photo" aria-label="현재 현장 사진 확대"><img id="scene-image" src="assets/full-map.jpg" alt="전체 맵 · 초기위치, 자재창고, 제작공정과 중앙 아래 대기장소"><span>현장 사진 <b>↗</b></span></button><div class="scene-copy"><p id="scene-kicker" class="eyebrow">READY TO START</p><h3 id="scene-title">주문을 기다리고 있어요</h3><p id="scene-detail">Host PC에서 제품 수량을 입력하면 두 카운트가 설정되고 시뮬레이션이 시작됩니다.</p></div><div class="gate-box"><span>제작공정 교대 조건</span><ul id="gates"><li>앞 제품 파렛트 적재 완료</li><li>앞 버거 대기장소 도착</li><li>다음 부품 3개 적재 완료</li></ul></div></aside><section class="event-panel"><div class="panel-heading"><div><span class="section-number">03</span><h2>공정 이벤트</h2><span id="event-count">0건</span></div><button id="export" class="text-button">기록 내려받기 ↓</button></div><div id="event-log" role="log" aria-live="off"><div class="empty-log">주문을 시작하면 장비 동작과 카운트 변경 이력이 표시됩니다.</div></div></section><section class="connection-detail"><h3>Host 통신 기록·실행 안내</h3><p id="host-progress">호스트 지시 → 웹 실행 → 완료 회신 → 다음 단계</p><p id="host-version" role="status"></p><details open><summary>통신 기록</summary><pre id="host-log"></pre></details><div id="host-local-help"><p>호스트 PC에서 시험 프로그램을 실행하고 안내된 로컬 주소로 접속하세요.</p><a href="downloads.html">Host 패키지 받기·사용법 보기 ↗</a><code>python3 web/host/server.py</code><small>압축 해제 후 robot3_host/README.md 먼저 확인 · 웹 시험은 Python 3.10 이상 · ROS 폴더는 팀 개발용 명세</small></div><small>목적지까지의 이동은 중간 노드에서 끊지 않습니다. 작업 완료 지점에서 다음 지시를 기다립니다. 완료 회신은 웹에서 생성하며 실제 로봇·센서는 연결하지 않습니다.</small></section><details class="map-guide"><summary>지도 표식·카운트 안내</summary><p class="dock-legend"><strong>▲</strong> 버거 전방 · <strong>AR</strong> ArUco 위치 표식 · <span class="black-line-key"></span> 후방 적외선 감지선<br><small>대기장소에는 ArUco 마커 없이 후방 IR 감지선만 있습니다. 표식과 센서는 배치 설명용이며 실제 마커 ID·센서 입력과 연결되지 않습니다.</small></p><div class="host-footnote"><span class="host-footnote-icon">↳</span><p>주문한 수량으로 두 잔여 카운트를 설정합니다.<br>공정이 진행되면 Host에서 자동으로 갱신합니다.</p></div></details></div></dialog>
+<dialog id="photo-dialog"><button id="close-dialog" aria-label="사진 닫기">×</button><img id="dialog-image" alt=""><div><h2 id="dialog-title"></h2><p id="dialog-description"></p></div></dialog>
+<script src="config.js?v=20260929-admin"></script><script src="settings.js?v=20260929-admin"></script><script src="engine.js?v=20260930-waiting-forward"></script><script src="host-client.js?v=20260929-admin"></script><script src="system-policy.js?v=20260929-host-config"></script><script src="ros-config.js?v=20260930-ros"></script><script src="assets/vendor/roslib-1.4.1.min.js"></script><script src="ros-client.js?v=20260930-ros"></script><script src="app.js?v=20260930-waiting-forward"></script>
+</body></html>

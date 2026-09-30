@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Robot3 · 관리자 설정</title><link rel="stylesheet" href="styles.css?v=20260929-admin"><link rel="stylesheet" href="admin.css?v=20260930-speeds"></head>
+<body>
+<header class="topbar"><a class="brand" href="./"><span class="brand-icon">R<span>3</span></span><strong>ROBOT3<span>FACTORY LAB</span></strong></a><a class="back-link" href="./">← 시뮬레이션으로 돌아가기</a></header>
+<main class="admin-main">
+<div class="heading"><div><p class="eyebrow">SIMULATION SETTINGS</p><h1>관리자 <span>설정</span></h1><p class="subtitle">버거 주행 속도를 조절하고 설정 파일로 관리하세요.</p></div><span class="admin-badge">시뮬레이션 전용</span></div>
+<div class="admin-notice"><strong>Host 시스템 설정 파일</strong><p><a href="downloads.html" style="text-decoration:underline">다운로드 파일별 용도와 사용법 보기 ↗</a></p><p>주문 수량·ROS 2 장치 주소·명령·완료 판정·다음 작업 조건은 <a href="system-config.json" download style="text-decoration:underline">system-config.json 다운로드</a>에서 관리합니다. ROS 2 실행부는 아직 구현 전이며, 현재 Host에 연결된 설정은 주문 수량 정책·자동 진행 기본값·웹 응답 제한시간·포트입니다.</p></div>
+<div class="admin-notice"><strong>적용 범위</strong><p>이 페이지는 공개된 시뮬레이션 설정 도구입니다. 실제 로봇 속도를 제어하지 않습니다. 저장값은 이 브라우저에만 보관되며 다음 새 주문부터 적용됩니다. 전진·후진 속도는 기존 이동 대비 배율로, 실제 m/s가 아닙니다.</p><p id="host-config-note">Host 통신 모드에서는 서버 설정을 사용합니다. 아래 유지보수 안내를 확인하세요.</p></div>
+<form id="settings-form">
+<div class="admin-grid"><section class="admin-card"><h2>버거 1</h2><p>첫 운송 로봇의 이동과 회전</p><div id="burger1-fields"></div></section><section class="admin-card"><h2>버거 2</h2><p>교대 운송 로봇의 이동과 회전</p><div id="burger2-fields"></div></section></div>
+<div class="admin-toolbar"><button type="submit" class="primary">이 브라우저에 저장</button><button type="button" id="reset-settings">기본값으로 복원</button><button type="button" id="export-config">config.js 내보내기</button><button type="button" id="export-json">JSON 백업</button><label class="import-button">JSON 가져오기<input id="import-config" type="file" accept=".json,application/json"></label></div>
+<p id="settings-status" role="status" aria-live="polite"></p>
+</form>
+<section class="admin-card preview"><div><p class="eyebrow">PREVIEW · A제품 2개</p><h2>예상 소요 시간 <span id="preview-time">—</span></h2><p id="preview-stages"></p></div><p>주행 속도를 바꾸면 예상 시간이 갱신됩니다. 공정 시간은 현재 설정값을 사용하며 실제 장비의 소요 시간을 보장하지 않습니다.</p></section>
+<section class="admin-card maintenance"><h2>config 파일로 유지보수하기</h2><p>공정 작업 시간은 관리자 화면에서 조절하지 않습니다. 필요하면 <code>config.js</code>의 <code>process</code> 값을 직접 수정하세요. 기존 브라우저 저장값과 가져온 JSON의 공정 시간은 속도 설정을 저장하거나 내보낼 때 유지됩니다.</p><ol><li>값을 조절하고 <strong>config.js 내보내기</strong>를 누릅니다. 내보내기는 브라우저 저장과 별개입니다.</li><li>프로젝트 루트의 <code>config.js</code>를 다운로드한 파일로 교체합니다. 브라우저 저장값이 있다면 <strong>기본값으로 복원</strong>해야 새 파일의 값이 적용됩니다.</li><li>GitHub에 반영하면 공개 사이트의 기본 설정이 바뀝니다. 관리자 페이지 저장만으로 공개 파일이 수정되지는 않습니다.</li></ol><h3>Host PC에 적용</h3><p>서버를 종료한 뒤 아래 명령으로 새 설정에 맞는 단계 시간표를 생성하고 다시 실행하세요. 생성에는 Node.js, 서버 실행에는 Python 3가 필요합니다. 실행 중인 주문에는 설정을 바꾸지 않습니다.</p><pre><code>node host/build_scenarios.cjs
+python3 host/server.py</code></pre><p>Host 모드에서는 서버가 전달한 설정으로 화면과 완료 ACK 시간을 맞춥니다. 브라우저 개인 설정은 Host 주문에 적용되지 않습니다.</p><p><a href="config.js" download>현재 배포 기본 config.js 다운로드 ↗</a></p></section>
+</main>
+<script src="config.js?v=20260929-admin"></script><script src="settings.js?v=20260929-admin"></script><script src="engine.js?v=20260930-waiting-forward"></script><script src="admin.js?v=20260930-speeds"></script>
+</body></html>

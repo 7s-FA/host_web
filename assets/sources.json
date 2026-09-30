@@ -1,0 +1,47 @@
+[
+  {
+    "file": "assets/waiting.jpg",
+    "originalName": "대기위치.JPG",
+    "source": "https://drive.google.com/file/d/1en-yTds-6Iw7SQJadIQpmvwByG9z2ub5/view?usp=drivesdk"
+  },
+  {
+    "file": "assets/route.jpg",
+    "originalName": "운반경로 및 대기위치.JPG",
+    "source": "https://drive.google.com/file/d/1Gd-VcS8YuYQWSo_sOLYip5wKopijF3yE/view?usp=drivesdk"
+  },
+  {
+    "file": "assets/assembly.jpg",
+    "originalName": "로봇팔2 조립.JPG",
+    "source": "https://drive.google.com/file/d/1itSr6drVf8oEMiJJKkqrME-HZ1FO3BaG/view?usp=drivesdk"
+  },
+  {
+    "file": "assets/process.jpg",
+    "originalName": "제작공정.JPG",
+    "source": "https://drive.google.com/file/d/1nkP3nz9PEKxT7qYafpINDMpEytdTUJj2/view?usp=drivesdk"
+  },
+  {
+    "file": "assets/pallet.jpg",
+    "originalName": "로봇팔3완제품적재.JPG",
+    "source": "https://drive.google.com/file/d/1xLF1SXVYEuubrS4fOx2jkmnPaTTqMl62/view?usp=drivesdk"
+  },
+  {
+    "file": "assets/home.jpg",
+    "originalName": "초기위치.JPG",
+    "source": "https://drive.google.com/file/d/1EAK14P5j5gyqOVsTXSnYcGJOiVbfHojM/view?usp=drivesdk"
+  },
+  {
+    "file": "assets/warehouse.jpg",
+    "originalName": "자재창고.JPG",
+    "source": "https://drive.google.com/file/d/1OeitXFb2rpe-g0TEdVq1_7ODcEDzlvQE/view?usp=drivesdk"
+  },
+  {
+    "file": "assets/loading.jpg",
+    "originalName": "버거1적재.JPG",
+    "source": "https://drive.google.com/file/d/1XsZgcVpyGw7kW9pK_Bk3BfDGquTIEBAC/view?usp=drivesdk"
+  },
+  {
+    "file": "assets/full-map.jpg",
+    "originalName": "맵 사진.JPG",
+    "source": "https://drive.google.com/file/d/1_FyVSPTEekcbw2PrOD7vufCFG2cD8rmT/view"
+  }
+]
