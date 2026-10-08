@@ -112,6 +112,15 @@ class HTTPTest(unittest.TestCase):
         try:
             with urllib.request.urlopen(base+'/?host=1') as r:
                 self.assertIn(b'host-client.js',r.read())
+                # 정적 파일은 ETag 로 재검증한다 (바뀌지 않았으면 304). API 응답은 no-store.
+                self.assertEqual(r.headers['Cache-Control'],'no-cache')
+                etag=r.headers['ETag'];self.assertTrue(etag)
+            with self.assertRaises(urllib.error.HTTPError) as cached:
+                urllib.request.urlopen(urllib.request.Request(base+'/',headers={'If-None-Match':etag}))
+            self.assertEqual(cached.exception.code,304)
+            with urllib.request.urlopen(urllib.request.Request(base+'/',headers={'If-None-Match':'"stale"'})) as r:
+                self.assertEqual(r.status,200)
+            with urllib.request.urlopen(base+'/api/state') as r:
                 self.assertEqual(r.headers['Cache-Control'],'no-store')
             for name in ['host-client.js','engine.js','app.js','assets/full-map.jpg']:
                 with urllib.request.urlopen(base+'/'+name) as r:

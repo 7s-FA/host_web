@@ -5,8 +5,9 @@
 window.ROS_BRIDGE_CONFIG={
  enabled:true,
  localOnly:true, // 기본: localhost/127.0.0.1의 HTTP 웹에서만 연결
- url:'ws://localhost:9090',
+ url:'ws://localhost:9090', // rosbridge 는 이 PC(localhost)에서만 접속을 받음
  topic:'/web_to_ros',
  messageType:'std_msgs/msg/String',
- publishIntervalMs:200 // 0.2초마다 화면 상태 송신 (주문 명령 아님)
+ publishIntervalMs:200, // 0.2초마다 화면 상태를 읽음 (바뀌었을 때만 송신, 주문 명령 아님)
+ heartbeatMs:1000 // 값이 같아도 이 간격으로 한 번은 송신
 };
