@@ -11,10 +11,12 @@
  const list=$('device-list');
  for(const [key,name] of Object.entries(names)){
   const item=document.createElement('article');item.className='device-item';item.id='device-'+key;
-  const header=document.createElement('header'),dot=document.createElement('i'),title=document.createElement('strong'),state=document.createElement('span'),caption=document.createElement('p'),detail=document.createElement('p'),button=document.createElement('button');
-  title.textContent=name;state.textContent='확인 불가';caption.className='device-components';caption.textContent=components[key];detail.className='device-detail';detail.textContent='Host 보고 대기';
+  const header=document.createElement('header'),title=document.createElement('strong'),state=document.createElement('p'),connection=document.createElement('span'),dot=document.createElement('i'),connectionText=document.createElement('span'),caption=document.createElement('p'),detail=document.createElement('p'),button=document.createElement('button');
+  title.textContent=name;state.className='device-work-state';state.textContent='작업 · 확인 불가';
+  connection.className='device-connection';connection.dataset.deviceConnection=key;connection.dataset.state='waiting';connection.setAttribute('role','status');dot.className='connection-dot';dot.setAttribute('aria-hidden','true');connectionText.className='connection-text';connectionText.textContent='확인 중';connection.append(dot,connectionText);
+  caption.className='device-components';caption.textContent=components[key];detail.className='device-detail';detail.textContent='Host 보고 대기';
   button.type='button';button.className='log-button';button.textContent='로그 보기 ↗';button.setAttribute('aria-label',name+' 로그 보기');button.onclick=()=>openLog(key);
-  header.append(dot,title,state);item.append(header,caption,detail,button);
+  header.append(title,connection);item.append(header,caption,state,detail,button);
   if(key==='M1'||key==='M2'){
    const batteryRow=document.createElement('div'),batteryLabel=document.createElement('span'),battery=document.createElement('p');
    batteryRow.className='robot-battery-control';batteryLabel.textContent='실제 배터리';battery.className='robot-battery';battery.dataset.batteryRobot=key;battery.setAttribute('role','status');battery.textContent='배터리 수신 대기';
@@ -57,7 +59,7 @@
   const connected=!!data.bridge_connected,order=data.order;
   $('bridge-pill').textContent=connected?'ROS Host 보고 수신 중':data.bridge_configured?'ROS Host 보고 끊김':'ROS Host 어댑터 미설정';
   $('bridge-pill').classList.toggle('connected',connected);
-  alert(connected?'Host가 장치 상태를 보고하고 있습니다.':data.bridge_configured?'Host 보고가 끊겼습니다. 다음 지시를 보류합니다.':'로컬 서버의 ROS 2 Host 어댑터가 연결되지 않았습니다. 화면에는 실장치 결과만 표시됩니다.',connected);
+  alert(connected?'Host 어댑터에서 작업 결과를 수신하고 있습니다.':data.bridge_configured?'Host 어댑터 보고가 끊겼습니다. 다음 지시를 보류합니다.':'ROS 2 Host 어댑터가 연결되지 않아 주문·작업 로그를 기다립니다. 장치 연결 표시등은 별도로 확인합니다.',connected);
   const policy=quantityPolicy();
   if(!selectionInitialized){quantity=policy.default;selectionInitialized=true;}
   quantity=Math.max(policy.min,Math.min(policy.max,quantity));
@@ -75,7 +77,7 @@
   $('command-note').textContent=data.pending_commands?`Host 어댑터 지시 수락 대기 · ${data.pending_commands}건`:'장치 완료와 선행 조건은 Host가 판정합니다.';
   for(const key of Object.keys(names)){
    const item=$('device-'+key),value=connected&&data.devices?.[key]||{state:'unknown',detail:'Host 보고 대기'};
-   item.dataset.state=value.state;item.querySelector('span').textContent=labels[value.state]||'확인 불가';item.querySelector('.device-detail').textContent=value.detail||'—';
+   item.dataset.state=value.state;item.querySelector('.device-work-state').textContent='작업 · '+(labels[value.state]||'확인 불가');item.querySelector('.device-detail').textContent=value.detail||'—';
   }
   const conditions=$('condition-list');conditions.replaceChildren();
   if(!data.conditions?.length){const li=document.createElement('li');li.textContent='Host의 완료 조건 보고를 기다립니다.';conditions.append(li);}
