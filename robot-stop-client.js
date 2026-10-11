@@ -1,0 +1,70 @@
+/* Explicit M1/M2 stop requests. Connecting or reconnecting never sends a command. */
+(function(root){
+ 'use strict';
+ function create({url,onChange=()=>{},WebSocket:Socket=root.WebSocket,now=Date.now}){
+  const prefix='robot-stop-'+(root.crypto?.randomUUID?.()||now().toString(36)+'-'+Math.random().toString(36).slice(2));
+  const robots={M1:{phase:'idle',message:'정지 요청 대기'},M2:{phase:'idle',message:'정지 요청 대기'}},requests=new Map();
+  let started=false,socket=null,connected=false,reconnect=null,serial=0;
+  function snapshot(){return {connected,robots:{M1:{...robots.M1},M2:{...robots.M2}}};}
+  function changed(){onChange(snapshot());}
+  function finish(id,phase,message){
+   const request=requests.get(id);if(!request)return;
+   root.clearTimeout(request.timer);requests.delete(id);robots[request.robot]={phase,message};
+  }
+  function invalidate(message){
+   for(const id of requests.keys())finish(id,'error',message);
+   for(const robot of ['M1','M2'])if(robots[robot].phase==='success')robots[robot]={phase:'idle',message:'이전 정지 응답 · 현재 상태는 다시 확인하세요.'};
+  }
+  function schedule(){if(started&&reconnect===null)reconnect=root.setTimeout(connect,3000);}
+  function receive(message){
+   const request=requests.get(message.id);
+   if(!request||message.action!==undefined&&message.action!==request.action)return;
+   if(now()>=request.deadline){finish(message.id,'error','응답 시간 초과 · 실제 정지 여부 미확인');changed();return;}
+   if(message.op==='action_result'){
+    const success=message.result===true&&message.status===4&&message.values?.success===true&&message.values?.message==='IDLE';
+    const detail=typeof message.values?.message==='string'?message.values.message:'';
+    finish(message.id,success?'success':'error',success?'정지 확인 완료':'정지 요청 실패 / 거부 · 실제 정지 여부 미확인'+(detail?' · '+detail:''));changed();
+   }else if(message.op==='status'&&message.level==='error'){
+    finish(message.id,'error','정지 요청 오류 · 실제 정지 여부 미확인'+(typeof message.msg==='string'?' · '+message.msg:''));changed();
+   }
+  }
+  function connect(){
+   reconnect=null;if(!started)return;
+   let current;
+   try{current=new Socket(url);socket=current;}
+   catch(_){connected=false;changed();schedule();return;}
+   current.onopen=()=>{if(socket!==current||!started)return;connected=true;changed();};
+   current.onmessage=event=>{
+    if(socket!==current||!connected)return;
+    let message;try{message=JSON.parse(event.data);}catch{return;}
+    if(message&&typeof message==='object')receive(message);
+   };
+   current.onclose=()=>{
+    if(socket!==current)return;
+    socket=null;connected=false;invalidate('ROS 연결 끊김 · 실제 정지 여부 미확인');changed();schedule();
+   };
+   current.onerror=()=>{if(socket===current)current.close();};
+  }
+  function requestStop(robot){
+   if(robot!=='M1'&&robot!=='M2'||robots[robot].phase==='pending')return false;
+   if(!connected||socket?.readyState!==(Socket.OPEN??1)){
+    robots[robot]={phase:'error',message:'ROS 연결 안 됨 · 정지 요청을 전송하지 못했습니다.'};changed();return false;
+   }
+   const id=prefix+'-'+robot+'-'+(++serial),action='/'+robot+'/data';
+   const request={robot,action,deadline:now()+10000,timer:null};
+   requests.set(id,request);robots[robot]={phase:'pending',message:'정지 요청 전송 · 응답 대기'};
+   request.timer=root.setTimeout(()=>{finish(id,'error','응답 시간 초과 · 실제 정지 여부 미확인');changed();},10000);
+   try{socket.send(JSON.stringify({op:'send_action_goal',id,action,action_type:'host_pkg/action/Burger',args:{command:'EMER_STOP',cmd_val:0},feedback:true}));}
+   catch(_){finish(id,'error','정지 요청 전송 실패 · 실제 정지 여부 미확인');changed();socket.close();return false;}
+   changed();return true;
+  }
+  function start(){if(started)return;started=true;connect();}
+  function close(){
+   started=false;root.clearTimeout(reconnect);reconnect=null;
+   const previous=socket;socket=null;connected=false;invalidate('연결 종료 · 실제 정지 여부 미확인');previous?.close();changed();
+  }
+  return {start,requestStop,snapshot,close};
+ }
+ const api={create};
+ if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.RobotStopClient=api;
+})(typeof window!=='undefined'?window:globalThis);

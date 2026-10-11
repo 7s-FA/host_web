@@ -1,4 +1,4 @@
-/* Host-only dashboard. It does not import the simulation engine or send robot commands. */
+/* Host reports drive the dashboard; robot-stop.js handles direct M1/M2 stop requests. */
 (()=>{
  'use strict';
  const $=id=>document.getElementById(id);
@@ -14,7 +14,15 @@
   const header=document.createElement('header'),dot=document.createElement('i'),title=document.createElement('strong'),state=document.createElement('span'),caption=document.createElement('p'),detail=document.createElement('p'),button=document.createElement('button');
   title.textContent=name;state.textContent='확인 불가';caption.className='device-components';caption.textContent=components[key];detail.className='device-detail';detail.textContent='Host 보고 대기';
   button.type='button';button.className='log-button';button.textContent='로그 보기 ↗';button.setAttribute('aria-label',name+' 로그 보기');button.onclick=()=>openLog(key);
-  header.append(dot,title,state);item.append(header,caption,detail,button);list.append(item);
+  header.append(dot,title,state);item.append(header,caption,detail,button);
+  if(key==='M1'||key==='M2'){
+   const controls=document.createElement('div'),label=document.createElement('span'),stop=document.createElement('button'),status=document.createElement('p');
+   controls.className='robot-stop-control';label.className='robot-stop-label';label.textContent='실제 로봇 정지';
+   stop.type='button';stop.className='robot-stop-button';stop.dataset.stopRobot=key;stop.textContent=key+' 정지';stop.setAttribute('aria-label','실제 '+key+' 정지');stop.disabled=true;
+   status.className='robot-stop-status';status.dataset.stopStatus=key;status.setAttribute('role','status');status.textContent='정지 연결 확인 중';
+   controls.append(label,stop,status);item.append(controls);
+  }
+  list.append(item);
  }
  function alert(text,ok=false){$('control-alert').textContent=text;$('control-alert').classList.toggle('ok',ok);}
  function quantityPolicy(){

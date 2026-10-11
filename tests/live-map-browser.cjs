@@ -7,9 +7,9 @@ const assert=require('node:assert/strict');
   let socket;
   page.on('pageerror',e=>errors.push(e.message));
   await page.routeWebSocket(/.*/,ws=>{
-   socket=ws;
    ws.onMessage(raw=>{
     const msg=JSON.parse(raw);sent.push(msg);
+    if(msg.op==='subscribe'&&msg.topic==='/burger1/amcl_pose')socket=ws;
     if(msg.op==='call_service')ws.send(JSON.stringify({op:'service_response',id:msg.id,service:msg.service,result:true,values:{publishers:['/device/action_server']}}));
    });
   });
