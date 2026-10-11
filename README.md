@@ -9,6 +9,37 @@
 - **로컬 서버:** `bash start.sh` 실행 후 `http://localhost:8082`에 접속합니다.
 - **VS Code Remote SSH:** Ports 탭에 `8082`를 추가하고 전달된 localhost 주소를 엽니다. 서버는 기본적으로 127.0.0.1에만 바인딩됩니다.
 
+## Host PC 한 번에 실행
+
+ROS 2 Jazzy가 설치된 Host PC에서 로봇 제어 패널용 웹 서버(8082)와 rosbridge(9090)를 함께 실행합니다. Host의 저장소 경로는 `~/host_web`, `~/final_project_host/host_backend` 기준입니다.
+
+최초 준비는 한 번만 실행합니다. 내려받은 기존 빌드 경로와 섞이지 않도록 `install_local`에 Action 타입을 빌드합니다.
+
+```bash
+sudo apt update
+sudo apt install ros-jazzy-rosbridge-suite python3-colcon-common-extensions
+source /opt/ros/jazzy/setup.bash
+cd ~/final_project_host/host_backend
+colcon --log-base log_local build \
+  --base-paths src/host_pkg \
+  --build-base build_local \
+  --install-base install_local \
+  --packages-select host_pkg
+```
+
+이후에는 터미널 하나에서 실행합니다.
+
+```bash
+cd ~/host_web
+bash start_host.sh
+```
+
+Host PC 브라우저에서 `http://localhost:8082/`를 열고 **로봇 제어 ↗**를 누릅니다. 실행 스크립트는 ROS 환경과 Action 타입을 불러오고 `ROS_DOMAIN_ID=40`, `ROS_LOCALHOST_ONLY=0`으로 `host/host_control.launch.py`를 실행합니다. 두 서버는 같은 PC에서만 접속하도록 바인딩합니다. 로봇과 Host의 네트워크·DDS 검색 설정도 서로 맞아야 합니다.
+
+각 버거는 Pi에서 `host-ready` 준비를 마쳐 `process` 모드와 Action 서버가 실행 중이어야 합니다. 이 런치는 개별 제어용이며, 전체 공정 제어기 `host_backend/src/host_pkg/src/main.py`와 로봇 준비 명령은 실행하지 않습니다. 시작할 때 이동 명령도 보내지 않습니다.
+
+`Ctrl+C`로 웹 서버·rosbridge·rosapi를 함께 종료합니다. **웹 통신 종료는 로봇 정지 명령이 아니므로, 이동 중인 로봇은 먼저 패널의 정지 버튼으로 정지 결과를 확인하세요.** 필수 프로세스 하나가 종료되면 나머지도 정리합니다. 8082 또는 9090 포트가 이미 사용 중이면 기존 서버를 종료하라는 오류를 표시합니다.
+
 ## 화면 구성
 
 - 왼쪽: 큰 공정 시뮬레이션 지도, 재생 제어, 장비 상태, 현재 공정 사진·이벤트.
