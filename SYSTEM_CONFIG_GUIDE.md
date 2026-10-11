@@ -1,13 +1,13 @@
 # Host 시스템 설정 — system-config.json
 
-시뮬레이션 속도는 `config.js`, **주문·장치 통신·명령·완료 확인·다음 작업 규칙은 `system-config.json`**에서 관리합니다. 실제 ROS 2 Action 클라이언트와 공정 스케줄러는 아직 구현 전입니다.
+**주문·장치 통신·명령·완료 확인·다음 작업 규칙은 `system-config.json`**에서 관리합니다. 주문은 1~2개만 지원합니다. 이 문서의 ROS 규칙은 전체 자동 공정용 구현 계약이며, 별도 로봇 제어 패널의 개별 Action 요청에는 적용되지 않습니다.
 
 ## 어디를 수정하나
 
 | 항목 | JSON 경로 | 예시 | 현재 적용 상태 |
 | --- | --- | --- | --- |
 | 기본 주문 수량 | `order.quantity_default` | 2 | 웹·HTTP Host 적용 |
-| 최소/최대 주문 수량 | `order.quantity_min`, `order.quantity_max` | 1, 20 | 웹 입력 및 Host 서버 검증 적용 |
+| 최소/최대 주문 수량 | `order.quantity_min`, `order.quantity_max` | 1, 2 | 웹 입력 및 Host 서버 검증 적용 |
 | 자동/단계별 초기값 | `order.auto_advance_default` | false | Host 시작 시 적용 |
 | 제품·부품 개수 | `order.product_type`, `order.parts_per_product` | A, 3 | 현재 엔진 제약. A·3 외에는 검증 실패 |
 | Host 웹 포트 | `web_host.port` | 8082 | 서버 실행 시 적용. `--port`가 우선 |
@@ -23,17 +23,15 @@
 
 현재 시뮬레이션의 빨강/초록 표시는 엔진의 모의 이벤트를 사용합니다. `conditions`나 `transitions`를 수정한다고 기존 시뮬레이션 경로·공정 순서가 바뀌지는 않습니다. 실제 ROS 실행부에서 이 설정을 읽도록 구현할 때 연결해야 합니다. 설정 파일을 만들었다고 실제 로봇이 연결되거나 동작하지는 않습니다.
 
-## 예시 1: 주문은 기본 3개, 최대 10개
+## 주문 수량 정책
 
-`order`에서 다음 값을 변경합니다. 나머지 필드는 유지하세요.
+`order`의 기본값은 다음과 같습니다. 웹 입력과 Host 검증은 **정수 1~2개**를 지원하며, 3개 이상 주문은 거부합니다.
 
 ```json
 "quantity_min": 1,
-"quantity_max": 10,
-"quantity_default": 3
+"quantity_max": 2,
+"quantity_default": 2
 ```
-
-현재 지원 범위는 1~20개입니다. 최대 수량을 20보다 크게 하려면 엔진·시간표·테스트의 지원 범위를 먼저 확장해야 합니다.
 
 ## 예시 2: 버거1의 ROS Action 주소 변경
 
@@ -101,9 +99,8 @@ python3 host/server.py
 - Host는 시작 시 `system-config.json`을 읽습니다. 실행 중 파일 수정은 기존 주문에 반영하지 않습니다.
 - 로컬 웹은 서버에서 수량 정책을 받아 사용합니다. 공개 웹은 생성된 `system-policy.js`를 사용합니다.
 - `system-policy.js`는 생성 파일이므로 직접 수정하지 않습니다. GitHub 배포에서도 자동 생성합니다.
-- 공개 기본값 변경은 JSON 수정·커밋·배포가 필요합니다. 관리자 페이지에서 파일 다운로드 링크를 제공합니다.
+- 공개 기본값 변경은 JSON 수정·커밋·배포가 필요합니다. 주문 수량은 지원 범위 1~2개를 유지합니다.
 - ROS 관련 값은 아직 실행부 미연결 상태입니다. 기존 HTTP ACK를 실제 장치 완료 Result로 혼동하지 않습니다.
-- 기존 `config.js`의 시뮬레이션 속도 변경 절차는 `CONFIG_GUIDE.md`를 참고하세요.
 
 ## 초기 출차·전진 주행 정책 (2026-09-29 변경)
 

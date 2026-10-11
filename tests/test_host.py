@@ -13,7 +13,7 @@ spec.loader.exec_module(m)
 
 def baseline_system_config():
     c=copy.deepcopy(m.SYSTEM_CONFIG)
-    c['order'].update(quantity_min=1,quantity_max=20,quantity_default=2,auto_advance_default=False)
+    c['order'].update(quantity_min=1,quantity_max=2,quantity_default=2,auto_advance_default=False)
     c['web_host']['browser_timeout_seconds']=5
     return c
 
@@ -39,7 +39,7 @@ class HostTest(unittest.TestCase):
         return self.send('ack', order_id=c['order_id'], seq=c['seq'], time=c['target_time'])
 
     def test_all_quantities_manual_and_auto(self):
-        for q in range(1,21):
+        for q in (1,2):
             for auto in (False, True):
                 self.send('reset')
                 self.send('auto', enabled=auto)
@@ -62,7 +62,7 @@ class HostTest(unittest.TestCase):
                 self.assertTrue(s['counters']['done'])
 
     def test_invalid_and_out_of_order(self):
-        for q in (0,21,True,1.5,'2'):
+        for q in (0,3,20,True,1.5,'2'):
             with self.assertRaises(ValueError): self.send('start', quantity=q)
         self.send('start', quantity=2)
         with self.assertRaises(ValueError): self.send('next')
@@ -126,10 +126,17 @@ class HTTPTest(unittest.TestCase):
                 with urllib.request.urlopen(base+'/'+name) as r:
                     self.assertEqual(r.status,200)
                     self.assertTrue(r.read())
+            for name in ['admin.html','admin.js','admin.css']:
+                with self.assertRaises(urllib.error.HTTPError) as removed_page:
+                    urllib.request.urlopen(base+'/'+name)
+                self.assertEqual(removed_page.exception.code,404)
             def post(action, origin=base, **data):
                 req=urllib.request.Request(base+'/api/'+action,json.dumps({'client_id':'http-test', 'message_id':action,**data}).encode(),{'Content-Type':'application/json','Origin':origin})
                 with urllib.request.urlopen(req) as r:return json.load(r)
             post('connect')
+            with self.assertRaises(urllib.error.HTTPError) as invalid_quantity:
+                post('start',quantity=3)
+            self.assertEqual(invalid_quantity.exception.code,400)
             s=post('start',quantity=2)
             c=s['command']
             self.assertEqual(post('ack',order_id=c['order_id'],seq=c['seq'],time=c['target_time'])['status'],'waiting')

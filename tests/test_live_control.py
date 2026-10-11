@@ -25,6 +25,29 @@ def order(status='waiting', stage=1):
 
 
 class LiveControlTest(unittest.TestCase):
+    def test_order_quantity_limits(self):
+        for quantity in (1, 2):
+            with self.subTest(quantity=quantity):
+                live = LiveControl('secret')
+                live.update(report(), 'secret')
+                live.issue('start', {'quantity': quantity})
+                self.assertEqual(live.pending('secret')[0]['quantity'], quantity)
+        live = LiveControl('secret')
+        live.update(report(), 'secret')
+        for quantity in (0, 3, 20, True, 1.5, '2'):
+            with self.subTest(quantity=quantity):
+                with self.assertRaises(ValueError): live.issue('start', {'quantity': quantity})
+                self.assertEqual(live.pending('secret'), [])
+
+    def test_reject_order_report_above_quantity_limit(self):
+        live = LiveControl('secret')
+        for key in ('quantity', 'transport_remaining', 'product_remaining', 'completed'):
+            with self.subTest(field=key):
+                invalid_order = order()
+                invalid_order[key] = 3
+                with self.assertRaises(ValueError): live.update(report(order=invalid_order), 'secret')
+                self.assertFalse(live.connected())
+
     def test_validated_completion_and_stale_bridge(self):
         now = [0]
         live = LiveControl('secret', clock=lambda: now[0], timeout=3)
@@ -73,6 +96,9 @@ class LiveControlTest(unittest.TestCase):
             self.assertEqual(error.exception.code, 403)
             post('/api/live/report', report(), 'test-secret')
             self.assertTrue(json.load(urlopen(base+'/api/live/state'))['bridge_connected'])
+            with self.assertRaises(HTTPError) as error:
+                post('/api/live/start', {'quantity': 3})
+            self.assertEqual(error.exception.code, 400)
             post('/api/live/start', {'quantity': 2})
             with self.assertRaises(HTTPError) as error:
                 urlopen(base+'/api/live/commands')

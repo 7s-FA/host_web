@@ -3,7 +3,7 @@
   "order": {
     "product_type": "A",
     "quantity_min": 1,
-    "quantity_max": 20,
+    "quantity_max": 2,
     "quantity_default": 2,
     "parts_per_product": 3,
     "auto_advance_default": false

@@ -12,7 +12,7 @@ const photos={
  waiting:{title:'버거 대기장소',detail:'교차 통로에서 대기장소를 바라보도록 정렬한 뒤 전진 주차합니다. ArUco 마커 없이 후방 IR 센서가 검은 감지선을 감지하면 정지합니다. 출차할 때는 10cm 후진·정지 후 180° 회전해 전진 주행합니다.'},
  home:{title:'버거 초기위치',detail:'두 버거는 왼쪽 벽의 마커를 바라보고 주차합니다. 로컬 cmd_vel로 10cm 후진·정지 후 180° 회전하고 Nav2 전진 주행을 시작합니다. 복귀 시에는 전진 진입 후 후방 센서가 감지선에 닿는 위치에서 멈춥니다.'}
 };
-let plan=null,time=0,playing=false,speed=1,following=true,currentPhoto='full-map',lastEventKey='',lastFrame=0;
+let plan=null,time=0,playing=false,following=true,currentPhoto='full-map',lastEventKey='',lastFrame=0;
 let manualMode=false,manualTarget=null,stages=[],stepBusy=false;
 const idlePlan=RobotSimulation.makePlan(2);
 // Dock cues are schematic placeholders; no physical marker IDs are assigned here.
@@ -83,11 +83,15 @@ function renderNavigation(s){
 }
 
 function formatTime(t){return `${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`;}
-function quantityPolicy(){return HostBridge.enabled&&HostBridge.state?.order_policy||window.SYSTEM_ORDER_POLICY||{quantity_min:1,quantity_max:20};}
+function quantityPolicy(){
+ const p=HostBridge.enabled&&HostBridge.state?.order_policy||window.SYSTEM_ORDER_POLICY||{quantity_min:1,quantity_max:2,quantity_default:2};
+ const min=Math.min(2,Math.max(1,p.quantity_min)),max=Math.min(2,p.quantity_max);
+ return {quantity_min:min,quantity_max:max,quantity_default:Math.max(min,Math.min(max,p.quantity_default??2))};
+}
 function validateQuantity(){const n=Number($('quantity').value),p=quantityPolicy();if(!Number.isInteger(n)||n<p.quantity_min||n>p.quantity_max)throw Error(`주문 수량을 ${p.quantity_min}~${p.quantity_max} 사이의 정수로 입력해 주세요.`);return n;}
 function setPhoto(key){if(currentPhoto!==key||!$('scene-image').getAttribute('src')){$('scene-image').src=photoPath(key);currentPhoto=key;}$('scene-image').alt=photos[key].title;}
 function openPhoto(key){$('dialog-image').src=photoPath(key);$('dialog-image').alt=photos[key].title;$('dialog-title').textContent=photos[key].title;$('dialog-description').textContent=photos[key].detail;$('photo-dialog').showModal();}
-function begin(run=true){manualMode=false;manualTarget=null;if(HostBridge.enabled){try{HostBridge.start(validateQuantity());}catch(e){$('form-error').textContent=e.message;}return;}try{plan=RobotSimulation.makePlan(validateQuantity(),SimulationSettings.read().config);stages=RobotSimulation.stagesFor(plan.quantity,plan.config);time=0;playing=run;following=true;lastEventKey='';$('form-error').textContent='';render();}catch(e){$('form-error').textContent=e.message;}}
+function begin(run=true){manualMode=false;manualTarget=null;if(HostBridge.enabled){try{HostBridge.start(validateQuantity());}catch(e){$('form-error').textContent=e.message;}return;}try{plan=RobotSimulation.makePlan(validateQuantity());stages=RobotSimulation.stagesFor(plan.quantity,plan.config);time=0;playing=run;following=true;lastEventKey='';$('form-error').textContent='';render();}catch(e){$('form-error').textContent=e.message;}}
 function reset(){if(HostBridge.enabled)return;navigationPinned=false;navigationRobot=0;plan=null;manualMode=false;manualTarget=null;stages=[];time=0;playing=false;following=true;lastEventKey='';setPhoto('full-map');render();}
 function step(direction){if(HostBridge.enabled)return;manualMode=false;manualTarget=null;if(!plan){begin(false);return;}playing=false;const times=[...new Set(plan.events.map(e=>e.time))];time=direction>0?(times.find(t=>t>time+0.001)??plan.duration):([...times].reverse().find(t=>t<time-0.001)??0);render();}
 function togglePlay(){if(HostBridge.enabled)return;if(manualMode){if(playing){playing=false;render();}else runStage();return;}if(!plan){begin();return;}if(time>=plan.duration){time=0;lastEventKey='';}playing=!playing;render();}
@@ -109,7 +113,6 @@ $('order-form').addEventListener('submit',e=>{e.preventDefault();begin();});
 $('plus').onclick=()=>$('quantity').value=Math.min(quantityPolicy().quantity_max,Math.max(quantityPolicy().quantity_min,Number($('quantity').value)||quantityPolicy().quantity_min)+1);
 $('minus').onclick=()=>$('quantity').value=Math.max(quantityPolicy().quantity_min,(Number($('quantity').value)||quantityPolicy().quantity_min)-1);
 $('play').onclick=togglePlay;$('reset').onclick=reset;$('next').onclick=()=>step(1);$('previous').onclick=()=>step(-1);
-$('speed').onchange=e=>speed=Number(e.target.value);
 $('timeline').oninput=e=>{if(!plan||HostBridge.enabled)return;playing=false;manualMode=false;manualTarget=null;time=Number(e.target.value);render();};
 $('follow').onclick=()=>{following=!following;render();};
 $('photo-open').onclick=()=>openPhoto(currentPhoto);
@@ -246,7 +249,7 @@ function applyHostState(state){
  playing=false;
  if(!HostBridge.enabled){const p=quantityPolicy();$('quantity').min=p.quantity_min;$('quantity').max=p.quantity_max;$('quantity').value=p.quantity_default||2;delete $('quantity').dataset.policy;reset();return;}
  if(!state){render();return;}
- if(state.order_policy){const p=state.order_policy;$('quantity').min=p.quantity_min;$('quantity').max=p.quantity_max;const key=JSON.stringify(p);if(!state.quantity&&$('quantity').dataset.policy!==key)$('quantity').value=p.quantity_default;$('quantity').dataset.policy=key;}
+ if(state.order_policy){const p=quantityPolicy();$('quantity').min=p.quantity_min;$('quantity').max=p.quantity_max;const key=JSON.stringify(p);if(!state.quantity&&$('quantity').dataset.policy!==key)$('quantity').value=p.quantity_default;$('quantity').dataset.policy=key;}
  if(!state.quantity){plan=null;time=0;lastEventKey='';}
  else{
   if(!plan||plan.hostOrder!==state.order_id){plan=RobotSimulation.makePlan(state.quantity,state.simulation_config||SimulationSettings.defaults);stages=RobotSimulation.stagesFor(state.quantity,plan.config);manualMode=false;manualTarget=null;plan.hostOrder=state.order_id;time=state.time;following=true;lastEventKey='';}
@@ -258,13 +261,13 @@ function applyHostState(state){
 function frame(now){
  if(lastFrame&&playing&&plan){
   const limit=HostBridge.enabled?(HostBridge.state?.command?.target_time??time):manualMode?(manualTarget??time):plan.duration;
-  time=Math.min(limit,time+Math.min((now-lastFrame)/1000,.2)*speed);
+  time=Math.min(limit,time+Math.min((now-lastFrame)/1000,.2));
   if(time>=limit){playing=false;if(HostBridge.enabled)HostBridge.complete();}
   render();
  }
  lastFrame=now;requestAnimationFrame(frame);
 }
-if(window.SYSTEM_ORDER_POLICY){const p=window.SYSTEM_ORDER_POLICY;$('quantity').min=p.quantity_min;$('quantity').max=p.quantity_max;$('quantity').value=p.quantity_default;}
+{const p=quantityPolicy();$('quantity').min=p.quantity_min;$('quantity').max=p.quantity_max;$('quantity').value=p.quantity_default;}
 render();HostBridge.init(applyHostState);requestAnimationFrame(frame);
 
 // Preserve the teammate telemetry contract: quantity/product strings, playing boolean.

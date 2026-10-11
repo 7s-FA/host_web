@@ -12,7 +12,6 @@ html=re.sub(r'<link rel="stylesheet" href="dashboard\.css(?:\?[^"]*)?">',lambda 
 for name in ['config','settings','system-policy','ros-config','ros-client']:
     html=re.sub(r'<script src="'+name+r'\.js(?:\?[^"]*)?"></script>',lambda _,name=name:'<script>'+(root/(name+'.js')).read_text()+'</script>',html)
 html=html.replace('<script src="assets/vendor/roslib-1.4.1.min.js"></script>', '<script>'+(root/'assets/vendor/roslib-1.4.1.min.js').read_text()+'</script>')
-html=html.replace('href="admin.html"','href="https://7s-fa.github.io/host_web/admin.html"')
 html=html.replace('href="downloads.html"','href="https://7s-fa.github.io/host_web/downloads.html"')
 html=html.replace('href="control.html"','href="https://7s-fa.github.io/host_web/control.html"')
 html=html.replace('href="waypoints.html"','href="https://7s-fa.github.io/host_web/waypoints.html"')

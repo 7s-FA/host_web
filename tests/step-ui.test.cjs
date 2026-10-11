@@ -3,7 +3,7 @@ Object.assign(require('../settings.js').defaults, structuredClone(require('./bas
 const assert=require('node:assert/strict');
 const vm=require('node:vm'),fs=require('node:fs');
 const sim=require('../engine.js');
-for(let q=1;q<=20;q++){
+for(let q=1;q<=2;q++){
  const plan=sim.makePlan(q),stages=sim.stagesFor(q);
  for(const stage of stages){
   const conditions=sim.stageConditions(plan,stage,stage.time);
@@ -14,7 +14,7 @@ for(let q=1;q<=20;q++){
 }
 const els=new Map();
 function element(){return {textContent:'',innerHTML:'',value:'2',dataset:{},style:{},children:[],classList:{toggle(){}},setAttribute(){},getAttribute(){return 'image';},append(...x){this.children.push(...x);},replaceChildren(...x){this.children=x;},querySelector(){return element();},querySelectorAll(){return [];},addEventListener(){}};}
-const el=id=>{if(!els.has(id))els.set(id,element());return els.get(id);};
+const el=id=>{if(id==='speed')return null;if(!els.has(id))els.set(id,element());return els.get(id);};
 const bridge={enabled:false,init(){},complete(){this.acks=(this.acks||0)+1;}};
 const ctx={SimulationSettings:require('../settings.js'),RobotSimulation:sim,HostBridge:bridge,window:{},document:{getElementById:el,createElement:element,createElementNS:element,querySelector:element,querySelectorAll(){return [];},addEventListener(){}},requestAnimationFrame(){},setTimeout,console};
 vm.createContext(ctx);vm.runInContext(fs.readFileSync('app.js','utf8'),ctx);
@@ -36,13 +36,23 @@ bridge.state={...bridge.state,status:'waiting',acked_seq:1,time:target,command:n
 assert.equal(el('conditions-list').children.at(-1).className,'condition-done');
 bridge.online=false;run('render()');assert.equal(el('step-order').disabled,true);
 assert.equal(el('conditions-list').children.at(-2).className,'');
-console.log('PASS: conditions for orders 1–20, animated stage barrier, double click, reset, automatic playback, Host ACK and offline UI.');
+console.log('PASS: conditions for orders 1–2, animated stage barrier, double click, reset, automatic playback, Host ACK and offline UI.');
 
-bridge.enabled=false;ctx.window.SYSTEM_ORDER_POLICY={quantity_min:2,quantity_max:5,quantity_default:3};
-run('reset()');el('quantity').value='6';assert.throws(()=>run('validateQuantity()'));
-el('quantity').value='3';assert.equal(run('validateQuantity()'),3);
-bridge.enabled=true;bridge.online=true;bridge.state={status:'idle',quantity:0,order_policy:{quantity_min:2,quantity_max:4,quantity_default:3}};
-run('applyHostState(HostBridge.state)');assert.equal(Number(el('quantity').value),3);
-el('quantity').value='4';run('applyHostState(HostBridge.state)');assert.equal(el('quantity').value,'4');
-assert.equal(Number(el('quantity').max),4);
-console.log('PASS: public and Host quantity policy, idle heartbeat preserves operator input.');
+bridge.enabled=false;ctx.window.SYSTEM_ORDER_POLICY={quantity_min:1,quantity_max:2,quantity_default:2};
+run('reset()');
+for(const value of ['0','3','20','1.5']){el('quantity').value=value;assert.throws(()=>run('validateQuantity()'));}
+for(const value of ['1','2']){el('quantity').value=value;assert.equal(run('validateQuantity()'),Number(value));}
+el('quantity').value='2';el('plus').onclick();assert.equal(Number(el('quantity').value),2);
+el('quantity').value='3';run('begin()');assert.equal(run('plan'),null);assert.match(el('form-error').textContent,/1~2/);
+run('runStage()');assert.equal(run('plan'),null);
+bridge.enabled=true;bridge.online=true;bridge.state={status:'idle',quantity:0,order_policy:{quantity_min:1,quantity_max:2,quantity_default:2}};
+run('applyHostState(HostBridge.state)');assert.equal(Number(el('quantity').value),2);
+el('quantity').value='1';run('applyHostState(HostBridge.state)');assert.equal(el('quantity').value,'1');
+assert.equal(Number(el('quantity').max),2);
+bridge.state.order_policy={quantity_min:1,quantity_max:20,quantity_default:3};
+run('applyHostState(HostBridge.state)');assert.equal(Number(el('quantity').max),2);assert.equal(Number(el('quantity').value),1);
+el('quantity').value='3';assert.throws(()=>run('validateQuantity()'));
+bridge.enabled=false;ctx.window.SYSTEM_ORDER_POLICY={quantity_min:1,quantity_max:20,quantity_default:3};
+run('applyHostState(null)');assert.equal(Number(el('quantity').max),2);assert.equal(Number(el('quantity').value),2);
+delete ctx.window.SYSTEM_ORDER_POLICY;el('quantity').value='3';assert.throws(()=>run('validateQuantity()'));
+console.log('PASS: orders limited to 1–2, legacy policies capped, idle heartbeat preserves input, removed speed UI not accessed.');

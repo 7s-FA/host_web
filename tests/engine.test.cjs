@@ -3,7 +3,7 @@ Object.assign(require('../settings.js').defaults, structuredClone(require('./bas
 const assert=require('node:assert/strict');
 const {makePlan,snapshot}=require('../engine.js');
 let cases=0;
-for(const n of [1,2,3,4,5,10,20]){
+for(const n of [1,2]){
  const p=makePlan(n),end=snapshot(p,p.duration);
  assert.equal(end.transport,0);assert.equal(end.remaining,0);assert.equal(end.completed,n);assert(end.done);
  end.robots.forEach(r=>{assert.equal(r.place,'home');assert.equal(r.parts,0);});
@@ -22,13 +22,13 @@ for(const n of [1,2,3,4,5,10,20]){
 const p=makePlan(2),j=p.jobs;
 assert(j[1].loadStart<j[0].assemblyEnd,'second load overlaps first assembly');
 for(const job of j){assert.equal(snapshot(p,job.dispatch-.001).transport,snapshot(p,job.dispatch).transport+1);assert.equal(snapshot(p,job.palletEnd-.001).remaining,snapshot(p,job.palletEnd).remaining+1);}
-for(const bad of [0,-1,21,NaN,Infinity,1.2,'2'])assert.throws(()=>makePlan(bad));
+for(const bad of [0,-1,3,20,21,NaN,Infinity,1.2,'2'])assert.throws(()=>makePlan(bad));
 console.log(`PASS: ${cases} order sizes; counters, all 3 parts, concurrent work, exclusive resources, interlocks, seek and return-to-home.`);
 // All routes must follow floor aisles, with no diagonal cuts through workboards.
 const {path,position,POINTS}=require('../engine.js');
 const floorAreas=[[280,250,400,975],[50,640,435,850]];
 const inFloor=([x,y])=>floorAreas.some(([l,t,r,b])=>x>=l&&x<=r&&y>=t&&y<=b);
-for(const n of [1,2,3,20])for(const task of makePlan(n).tasks.filter(t=>t.type==='move')){
+for(const n of [1,2])for(const task of makePlan(n).tasks.filter(t=>t.type==='move')){
  const route=path(task.from,task.to,task.actor);
  const endpoint=place=>POINTS[place==='home'?'home'+(task.actor+1):place];
  assert.deepEqual(route[0],endpoint(task.from));
@@ -41,7 +41,7 @@ assert(POINTS.assembly[0]>POINTS.warehouse[0]&&POINTS.assembly[1]>POINTS.warehou
 console.log('PASS: photo-oriented floor layout, route endpoints, orthogonal aisles and workboard avoidance.');
 
 // The second robot stages as soon as the first reaches storage, before dispatch.
-for(let n=1;n<=20;n++){
+for(let n=1;n<=2;n++){
  const plan=makePlan(n);
  const firstArrival=plan.events.find(e=>e.kind==='arrive'&&e.robot===0&&e.to==='warehouse');
  const staging=plan.tasks.filter(t=>t.actor===1&&t.type==='move'&&t.from==='home'&&t.to==='waiting');
@@ -67,11 +67,11 @@ for(const robot of [0,1]){
  assert.deepEqual(path('assembly','warehouse',robot)[0],route.at(-1));
  assert.deepEqual(path('assembly','warehouse',robot).at(-1),route[0]);
 }
-console.log('PASS: staging trigger for orders 1–20, exact arrival boundary and straight assembly docking.');
+console.log('PASS: staging trigger for orders 1–2, exact arrival boundary and straight assembly docking.');
 // Turning occupies time at a fixed point; driving never slides sideways.
 const {pose,DOCK_HEADINGS,motionPose}=require('../engine.js');
 const angularDistance=(a,b)=>Math.abs((a-b+540)%360-180);
-for(const n of [1,2,3,20]){
+for(const n of [1,2]){
  const plan=makePlan(n);
  for(const task of plan.tasks.filter(t=>t.type==='move')){
   for(const phase of task.motion){
@@ -104,7 +104,7 @@ for(const n of [1,2,3,20]){
  const mid=snapshot(plan,plan.duration/2);snapshot(plan,plan.duration);assert.deepEqual(snapshot(plan,plan.duration/2),mid);
 }
 console.log('PASS: stationary animated turns, aligned driving, continuous headings and deterministic seek.');
-for(const n of [2,3,20]){
+for(const n of [2]){
  const plan=makePlan(n);
  for(const task of plan.tasks.filter(t=>t.type==='move'&&t.to==='waiting')){
   const before=snapshot(plan,task.end-.01).robots[task.actor];
@@ -133,7 +133,7 @@ for(const n of [2,3,20]){
 }
 console.log('PASS: forward parking into waiting bay, rear IR stop and short reverse/180° forward departure.');
 
-for(const n of [1,2,3,20]){
+for(const n of [1,2]){
  const plan=makePlan(n);
  snapshot(plan,0).robots.forEach(r=>assert.equal(r.heading,270));
  snapshot(plan,plan.duration).robots.forEach(r=>assert.equal(r.heading,270));
@@ -166,7 +166,7 @@ for(const n of [1,2,3,20]){
 }
 console.log('PASS: all four docks use short reverse exit → 180° turn after clearance → forward transit.');
 
-for(let n=2;n<=20;n++){
+for(let n=2;n<=2;n++){
  const plan=makePlan(n),last=plan.jobs.at(-1),other=1-last.robot;
  const returning=plan.tasks.find(t=>t.actor===other&&t.type==='move'&&t.from==='waiting'&&t.to==='home');
  assert(returning.start>=last.arrived,'Wait until the other robot finishes assembly docking');
@@ -174,7 +174,7 @@ for(let n=2;n<=20;n++){
  assert(!plan.tasks.some(t=>t.actor===other&&t.type==='move'&&t.start<last.arrived&&t.end>last.dispatch),'No simultaneous travel during final delivery');
  assert.equal(snapshot(plan,last.arrived).transport,0);
 }
-console.log('PASS: final delivery docking completes before the waiting robot returns home, orders 2–20.');
+console.log('PASS: final delivery docking completes before the waiting robot returns home, orders 2.');
 
 for(const robot of [0,1]){
  const home=POINTS['home'+(robot+1)];

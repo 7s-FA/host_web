@@ -1,6 +1,6 @@
 # 웹 → ROS 상태 송신 시험
 
-팀원 수정본의 송신 기능을 최신 관리자 설정·시스템 설정·출차 경로에 합쳤습니다. 웹은 `rosbridge`에 연결해 `/web_to_ros`로 화면 상태를 보냅니다. 실제 로봇 명령이나 작업 완료 회신은 아직 연결하지 않았습니다.
+웹은 `rosbridge`에 연결해 `/web_to_ros`로 화면 상태를 보냅니다. 이 토픽은 주문 명령이나 작업 완료 회신이 아닙니다. 메인 화면의 **로봇 제어 ↗**에서 버거에 개별 Action을 요청하는 기능과 구분합니다.
 
 ## 수정할 파일
 
@@ -13,7 +13,7 @@
 | `app.js` | 현재 수량·재생 여부·제품명 제공 |
 | `assets/vendor/roslib-1.4.1.min.js` | 패키지에 포함한 ROS 라이브러리. CDN 접속 불필요 |
 
-`config.js`의 시뮬레이션 속도와 독립된 설정입니다. 관리자 설정을 내보내도 ROS 설정은 덮어쓰지 않습니다. `system-config.json`의 ROS Action 규칙을 실행하는 기능은 여전히 별도 구현 대상입니다.
+`system-config.json`의 자동 공정용 ROS 규칙을 실행하는 기능은 별도 구현 대상입니다.
 
 ## 기본값
 
@@ -24,18 +24,21 @@ window.ROS_BRIDGE_CONFIG={
  url:'ws://localhost:9090',
  topic:'/web_to_ros',
  messageType:'std_msgs/msg/String',
- publishIntervalMs:200
+ publishIntervalMs:200,
+ heartbeatMs:1000
 };
 ```
 
 - 기본값은 HTTP의 `localhost` 또는 `127.0.0.1`에서만 자동 연결합니다. 공개 웹사이트와 단일 HTML 파일에서는 연결하지 않습니다.
-- 연결된 동안 주문 대기·일시정지를 포함하여 200ms(초당 5번)마다 화면 상태를 보냅니다. 주기는 100~60000ms의 정수입니다.
+- 연결된 동안 주문 대기·일시정지를 포함하여 기본 200ms마다 화면 상태를 확인합니다. 값이 바뀌거나 마지막 송신에서 1초가 지나면 전송합니다. 확인 주기는 100~60000ms의 정수입니다.
 - 화면의 **ROS 연결 해제 / ROS 연결·재연결** 버튼으로 제어합니다. 서버를 늦게 켰거나 연결이 끊겼다면 재연결하세요. 자동 재시도와 끊긴 동안의 데이터 재전송은 없습니다.
 - ROS 연결 여부는 기존 **호스트 연결** HTTP 시험과 별개입니다. ROS 서버·라이브러리가 없어도 시뮬레이션과 HTTP 시험은 계속 사용할 수 있습니다.
 - 다른 PC의 rosbridge라면 `url`을 그 PC 주소로 바꿉니다. `localhost`는 브라우저를 실행한 PC입니다. 다른 주소에서 웹까지 열려면 `localOnly:false`가 필요합니다. HTTPS 웹에서는 브라우저 정책에 맞는 WSS 구성이 필요할 수 있습니다.
 - 설정을 변경한 뒤 새로고침합니다. 시나리오를 다시 생성할 필요는 없습니다.
 
 ## Host PC에서 확인
+
+전체 소스를 clone한 Host PC에서는 루트 README의 사전 준비 후 `cd ~/host_web && bash start_host.sh`로 웹 서버와 rosbridge를 함께 켤 수 있습니다. 아래는 상태 송신만 개별 확인하는 절차이며, 통합 런치가 켜져 있다면 rosbridge와 웹 서버를 중복 실행하지 않습니다.
 
 ROS 2 Jazzy와 rosbridge_server가 설치되어 있다는 전제입니다. 미설치 시 `sudo apt install ros-jazzy-rosbridge-suite`로 설치합니다. 각 ROS 터미널에서 환경을 설정하세요.
 
@@ -44,7 +47,7 @@ ROS 2 Jazzy와 rosbridge_server가 설치되어 있다는 전제입니다. 미�
 ```bash
 source /opt/ros/jazzy/setup.bash
 export ROS_DOMAIN_ID=40
-ros2 launch rosbridge_server rosbridge_websocket_launch.xml
+ros2 launch rosbridge_server rosbridge_websocket_launch.xml address:=127.0.0.1 port:=9090
 ```
 
 터미널 2 — 수신 확인:
@@ -61,7 +64,7 @@ ros2 topic echo /web_to_ros std_msgs/msg/String
 python3 web/host/server.py
 ```
 
-저장소를 clone했다면 `python3 host/server.py`를 사용합니다. `http://127.0.0.1:8082/`를 열어 **ROS 연결됨**을 확인하고 제품 수량과 재생 상태를 바꿉니다. HTTP 단계 시험도 하려면 기존 **호스트 연결** 버튼을 누릅니다.
+저장소를 clone했다면 `python3 host/server.py`를 사용합니다. `http://127.0.0.1:8082/`를 열어 **ROS 연결됨**을 확인하고 제품 수량(1~2개)과 재생 상태를 바꿉니다. HTTP 단계 시험도 하려면 기존 **호스트 연결** 버튼을 누릅니다.
 
 수신 메시지의 `data`는 다음 JSON을 담은 문자열입니다. 팀원 코드와 호환되도록 수량도 문자열로 유지했습니다.
 

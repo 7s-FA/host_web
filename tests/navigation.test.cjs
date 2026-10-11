@@ -5,7 +5,7 @@ assert.deepEqual(first.navigation.map(s=>s.code),['UNDOCK','TURN_180','NAV_HOME_
 assert.equal(first.navigation[2].condition,'WP1 도착');
 assert.equal(first.navigation[3].condition,'WP2 도착');
 assert.deepEqual(sim.motionPose(first,first.start+first.navigation[3].end).position,sim.WAYPOINTS[2]);
-for(let q=1;q<=20;q++){
+for(let q=1;q<=2;q++){
  const plan=sim.makePlan(q);
  for(const move of plan.tasks.filter(t=>t.type==='move')){
   const steps=move.navigation;

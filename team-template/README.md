@@ -4,12 +4,11 @@
 
 **ROS_DOMAIN_ID=40**을 기준으로 Host가 주문을 받고 버거 2대·로봇팔 3대에 작업을 지시하며, 실제 완료 결과로 다음 작업을 진행하는 시스템을 개발합니다.
 
-이 패키지는 **기존 웹/HTTP 시험 프로그램 + 시스템 설정 + 팀 개발 폴더 및 작업 명세**입니다. ROS 2 Host·Action 서버·웹 브리지는 아직 구현되지 않았습니다. ROS 폴더의 README는 팀원이 구현할 명세이며 실행 코드가 아닙니다. 아직 `colcon build`나 `ros2 launch`로 전체 시스템을 실행할 수 없습니다.
+이 패키지는 **기존 웹/HTTP 시험 프로그램 + 시스템 설정 + 팀 개발 폴더 및 작업 명세**입니다. 전체 자동 공정용 ROS 2 Host·Action 서버·웹 브리지는 아직 구현되지 않았습니다. ROS 폴더의 README는 팀원이 구현할 명세이며 실행 코드가 아닙니다. 아직 `colcon build`나 `ros2 launch`로 전체 시스템을 실행할 수 없습니다.
 
 | 구분 | 제공 상태 |
 | --- | --- |
 | 주문 입력·카운트·단계별 실행·빨강/초록 조건 표시 | 웹 시뮬레이션 구현됨 |
-| 관리자 버거 주행 속도 설정 | 시뮬레이션용 구현됨 |
 | 웹 ↔ Python Host 명령/ACK 시험 | 구현됨, 실제 장치 제어 아님 |
 | 실장치 관제 화면·로컬 어댑터 API | 화면·상태 수신 계약 구현, ROS 2 어댑터는 팀 구현 필요 |
 | system-config 및 검증기 | 제공됨, 주문/HTTP 일부 설정 연결됨 |
@@ -42,8 +41,8 @@ robot3_host/
 ├─ robot3_web_bridge/README.md      # 웹 ↔ ROS 연결 개발 명세
 ├─ robot3_mock_devices/README.md    # 가짜 장치 5개 개발 명세
 ├─ web/                            # 기존 동작하는 웹·HTTP 시험 파일
-│  ├─ index.html / admin.html
-│  ├─ config.js                     # 시뮬레이션 속도·시간 기본값
+│  ├─ index.html / control.html
+│  ├─ config.js                     # 시뮬레이션 내부 고정값
 │  ├─ app.js / engine.js / assets/
 │  └─ host/
 │     ├─ server.py                  # 기존 HTTP 시험 서버
@@ -65,7 +64,7 @@ python3 web/host/server.py
 
 기본 접속: `http://127.0.0.1:8082/?host=1`
 
-- 관리자: `http://127.0.0.1:8082/admin.html`
+- 주문 수량: A제품 1개 또는 2개
 - 종료: 터미널에서 Ctrl+C
 - 실행 위치와 무관하게 설정은 `config/system-config.json`에서 읽습니다.
 - 이 서버는 브라우저와의 시뮬레이션 ACK 시험용입니다. 실제 ROS 제어기로 오인하지 마세요.
@@ -80,14 +79,20 @@ python3 web/host/server.py
 
 서버가 이미 켜져 있으면 종료 후 다시 실행합니다. 생성된 웹 수량 정책은 `web/system-policy.js`에 저장됩니다. Host 포트·수량 범위·자동 진행 초기값·브라우저 무응답 제한시간은 현재 적용됩니다. ROS 주소·완료·전환 규칙은 향후 구현할 실행부가 읽어야 합니다.
 
-시뮬레이션 속도·시간을 수정하려면 `web/config.js`를 편집하거나 관리자에서 내보낸 파일로 교체한 뒤 다음을 실행합니다. 생성에는 Node.js 22 이상이 필요합니다.
+시뮬레이션은 고정된 주행·공정 값을 사용합니다. `config/SYSTEM_CONFIG_GUIDE.md`는 원본 프로젝트 기준 경로 설명을 포함하므로 **이 ZIP에서는 위 경로 대응과 실행 명령을 우선 사용하세요.**
+
+## 실제 버거 개별 제어
+
+메인 화면의 **로봇 제어 ↗** 패널 파일도 포함되어 있지만, Python 서버만 켜면 실제 로봇에 연결되지 않습니다. 로봇의 준비된 Action 서버와 Host의 rosbridge가 별도로 필요합니다.
+
+이 ZIP에는 `start_host.sh`와 통합 런치가 없습니다. 실제 Host에서는 [전체 저장소](https://github.com/7s-FA/host_web)를 `~/host_web`에 clone하고, 저장소 README의 ROS 2 Jazzy·`host_backend/install_local` 사전 준비를 마친 뒤 다음을 실행하세요.
 
 ```bash
-node web/host/build_scenarios.cjs
-python3 web/host/server.py
+cd ~/host_web
+bash start_host.sh
 ```
 
-`config/SYSTEM_CONFIG_GUIDE.md`와 `web/CONFIG_GUIDE.md`는 원본 프로젝트 기준 경로 설명을 포함합니다. **이 ZIP에서는 위 경로 대응과 실행 명령을 우선 사용하세요.**
+Host PC 브라우저의 `http://localhost:8082/`에서 **로봇 제어 ↗**를 엽니다. 각 버거는 Pi에서 `host-ready` 준비가 필요합니다. 개별 이동 제어와 아래의 전체 자동 공정 개발 명세는 별개입니다.
 
 ## 팀별 작업 분배
 

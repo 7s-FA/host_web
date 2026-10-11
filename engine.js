@@ -22,7 +22,7 @@
   const NAME = {home:'초기위치',waiting:'대기장소',warehouse:'자재창고',assembly:'제작공정'};
   function makePlan(quantity, config=Settings.defaults) {
     config=Settings.validate(config);
-    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 20) throw new RangeError('주문 수량은 1~20 사이의 정수로 입력하세요.');
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 2) throw new RangeError('주문 수량은 1~2 사이의 정수로 입력하세요.');
     const tasks=[], events=[], jobs=[], tails=[0,0];
     let serial=0;
     const event=(time,kind,data={})=>events.push({time,kind,...data,serial:serial++});

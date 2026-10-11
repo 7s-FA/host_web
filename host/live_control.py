@@ -15,7 +15,7 @@ ORDER_STATES = {'idle', 'running', 'waiting', 'paused', 'done', 'failed'}
 class LiveControl:
     def __init__(self, token='', clock=time.monotonic, timeout=3, order_policy=None):
         self.token = token
-        self.order_policy = order_policy or {'quantity_min': 1, 'quantity_max': 20, 'quantity_default': 2}
+        self.order_policy = order_policy or {'quantity_min': 1, 'quantity_max': 2, 'quantity_default': 2}
         self.clock = clock
         self.timeout = timeout
         self.last_report_at = None
@@ -65,7 +65,7 @@ class LiveControl:
                 raise ValueError('주문 상태 형식 오류')
             for key in ('quantity', 'transport_remaining', 'product_remaining', 'completed', 'stage', 'stage_count'):
                 value = order.get(key)
-                if type(value) is not int or value < 0 or value > (100 if key in ('stage', 'stage_count') else 20):
+                if type(value) is not int or value < 0 or value > (100 if key in ('stage', 'stage_count') else self.order_policy['quantity_max']):
                     raise ValueError(f'주문 {key} 형식 오류')
             if not isinstance(order.get('id', ''), str):
                 raise ValueError('주문 ID 형식 오류')

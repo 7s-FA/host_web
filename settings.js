@@ -1,4 +1,4 @@
-/* Validation and browser overrides; no robot controller or remote write access. */
+/* Internal simulation configuration validation; no browser overrides. */
 (function(root){
  'use strict';
  const defaults=typeof module!=='undefined'&&module.exports?require('./config.js'):root.SIMULATION_CONFIG;
@@ -15,7 +15,6 @@
   ['process','linearHomeSeconds','리니어 원점 복귀 시간','초',.1,60,.1],
   ['process','palletSeconds','팔 3 파렛트 적재 시간','초',.1,120,.1]
  ];
- const key='robot3-simulation-settings-v1';
  function validate(value){
   if(!value||value.version!==1)throw Error('설정 version은 1이어야 합니다.');
   const result={version:1,burger1:{},burger2:{},process:{}};
@@ -26,14 +25,6 @@
   }
   return result;
  }
- function read(){
-  try{const raw=root.localStorage?.getItem(key);if(raw)return {config:validate(JSON.parse(raw)),source:'browser'};}
-  catch(e){return {config:validate(defaults),source:'default',warning:'저장 설정을 읽을 수 없어 config.js 기본값을 사용합니다.'};}
-  return {config:validate(defaults),source:'default'};
- }
- function save(config){const valid=validate(config);root.localStorage.setItem(key,JSON.stringify(valid));return valid;}
- function reset(){root.localStorage.removeItem(key);return validate(defaults);}
- function serialize(config){return '/* Robot3 simulation defaults. Rebuild Host scenarios after replacing this file. */\n(function(root){const config='+JSON.stringify(validate(config),null,2)+';\nif(typeof module!=="undefined"&&module.exports)module.exports=config;else root.SIMULATION_CONFIG=config;\n})(typeof window!=="undefined"?window:globalThis);\n';}
- const api={defaults:validate(defaults),fields,key,validate,read,save,reset,serialize};
+ const api={defaults:validate(defaults),fields,validate};
  if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SimulationSettings=api;
 })(typeof window!=='undefined'?window:globalThis);

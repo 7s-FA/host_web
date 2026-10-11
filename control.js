@@ -19,9 +19,9 @@
   $('bridge-pill').textContent=connected?'ROS Host 보고 수신 중':data.bridge_configured?'ROS Host 보고 끊김':'ROS Host 어댑터 미설정';
   $('bridge-pill').classList.toggle('connected',connected);
   alert(connected?'Host가 장치 상태를 보고하고 있습니다.':data.bridge_configured?'Host 보고가 끊겼습니다. 다음 지시를 보류합니다.':'로컬 서버의 ROS 2 Host 어댑터가 연결되지 않았습니다. 화면에는 실장치 결과만 표시됩니다.',connected);
-  const policy=data.order_policy||{quantity_min:1,quantity_max:20,quantity_default:2};
-  $('quantity').min=policy.quantity_min;$('quantity').max=policy.quantity_max;
-  if(!$('quantity').dataset.initialized){$('quantity').value=policy.quantity_default;$('quantity').dataset.initialized='1';}
+  const policy=data.order_policy||{quantity_min:1,quantity_max:2,quantity_default:2};
+  $('quantity').min=Math.min(2,policy.quantity_min);$('quantity').max=Math.min(2,policy.quantity_max);
+  if(!$('quantity').dataset.initialized){$('quantity').value=Math.min(2,policy.quantity_default);$('quantity').dataset.initialized='1';}
   const status=order?.status||'idle';$('order-status').textContent=orderLabels[status]||'주문 없음';$('order-status').className='status-tag '+status;
   $('order-id').textContent='주문 ID '+(order?.id||'—');
   $('stage-number').textContent=order?`${order.stage} / ${order.stage_count}`:'—';
@@ -53,7 +53,7 @@
   catch(error){errorText=error.message;}
   finally{busy=false;if(current)paint(current);if(errorText)alert(errorText);}
  }
- $('start-order').onclick=()=>{const quantity=Number($('quantity').value);issue('start',{quantity});};
+ $('start-order').onclick=()=>{const quantity=Number($('quantity').value);if(!Number.isInteger(quantity)||quantity<Number($('quantity').min)||quantity>Math.min(2,Number($('quantity').max)))return alert('주문 수량은 1~2 사이의 정수로 입력하세요.');issue('start',{quantity});};
  $('next-stage').onclick=()=>issue('next');
  $('pause-order').onclick=()=>issue(current?.order?.status==='paused'?'resume':'pause');
  refresh();setInterval(refresh,1000);
