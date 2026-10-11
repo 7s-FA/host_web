@@ -16,11 +16,16 @@
   button.type='button';button.className='log-button';button.textContent='로그 보기 ↗';button.setAttribute('aria-label',name+' 로그 보기');button.onclick=()=>openLog(key);
   header.append(dot,title,state);item.append(header,caption,detail,button);
   if(key==='M1'||key==='M2'){
-   const controls=document.createElement('div'),label=document.createElement('span'),stop=document.createElement('button'),status=document.createElement('p');
+   const batteryRow=document.createElement('div'),batteryLabel=document.createElement('span'),battery=document.createElement('p');
+   batteryRow.className='robot-battery-control';batteryLabel.textContent='실제 배터리';battery.className='robot-battery';battery.dataset.batteryRobot=key;battery.setAttribute('role','status');battery.textContent='배터리 수신 대기';
+   batteryRow.append(batteryLabel,battery);item.append(batteryRow);
+   const controls=document.createElement('div'),label=document.createElement('span'),stop=document.createElement('button'),restart=document.createElement('button'),buttons=document.createElement('div'),status=document.createElement('p');
    controls.className='robot-stop-control';label.className='robot-stop-label';label.textContent='실제 로봇 정지';
    stop.type='button';stop.className='robot-stop-button';stop.dataset.stopRobot=key;stop.textContent=key+' 정지';stop.setAttribute('aria-label','실제 '+key+' 정지');stop.disabled=true;
+   restart.type='button';restart.className='robot-restart-button';restart.dataset.restartRobot=key;restart.textContent=key+' 정지 해제';restart.setAttribute('aria-label','실제 '+key+' 정지 해제');restart.disabled=true;
+   buttons.className='robot-stop-buttons';buttons.append(stop,restart);
    status.className='robot-stop-status';status.dataset.stopStatus=key;status.setAttribute('role','status');status.textContent='정지 연결 확인 중';
-   controls.append(label,stop,status);item.append(controls);
+   controls.append(label,buttons,status);item.append(controls);
   }
   list.append(item);
  }

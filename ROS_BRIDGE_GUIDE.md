@@ -4,17 +4,21 @@
 
 ## 실물 상태 보기와 구분
 
-Host PC에서 통합 실행 후 `http://localhost:8082/?live=1` 또는 메인 화면의 **실물 상태 보기**를 엽니다. 상태 모니터링은 수신 전용이며 `/web_to_ros`의 주문·재생 상태 송신을 실행하지 않습니다. 사용자가 **M1 정지·M2 정지**를 누르면 해당 실물 로봇에 정지 Action을 보냅니다. 아래 `/web_to_ros` 송신 시험은 기본 데모 주소 `/`에만 해당합니다.
+Host PC에서 통합 실행 후 `http://localhost:8082/?live=1` 또는 메인 화면의 **실물 상태 보기**를 엽니다. 상태 모니터링은 수신 전용이며 `/web_to_ros`의 주문·재생 상태 송신을 실행하지 않습니다. 사용자가 M1·M2의 **정지·정지 해제**를 누르면 해당 실물 로봇에 Action을 보냅니다. 아래 `/web_to_ros` 송신 시험은 기본 데모 주소 `/`에만 해당합니다.
 
 M1·M2 위치·방향은 `/burger1/amcl_pose`, `/burger2/amcl_pose`의 `map` 좌표와 quaternion에서 읽습니다. `live-map-config.js`의 로봇별 WP1~4 보정은 기존 SVG에 맞춘 구간별 대응이며 정밀 축척이 아니므로 현장 보정이 필요합니다. 첫 좌표 전에는 아이콘이 숨겨지고, 3초 이상 오래된 좌표는 흐리게 표시하며 화면의 아이콘 움직임을 멈춥니다. Host와 로봇의 시각을 동기화하세요.
 
 로봇팔 1~3은 Action 실행·일시정지·완료 상태에 따라 표시하고 실행 중 애니메이션을 보여줍니다. ROSAPI의 발행 노드 확인이 실패하면 상태 미확인으로 전환하고 애니메이션을 멈춥니다. 세부 관절 자세를 표시하는 기능은 아닙니다. 실제 주문은 기존 Host 프로그램, 개별 이동은 로봇 제어 패널을 사용하며 Host 관제 페이지의 주문·단계 진행은 별도 어댑터가 필요합니다.
 
-## M1·M2 실물 정지 연결
+## M1·M2 실물 정지·해제와 배터리 연결
 
 메인 데모(`/`), 실물 상태 보기(`?live=1`), Host 관제(`control.html`)의 **M1 정지·M2 정지**는 HTTP `localhost`·`127.0.0.1`에서 rosbridge에 직접 연결합니다. 공개 사이트에서는 비활성화됩니다. HTTP Host 어댑터가 없거나 바쁘고 장치 상태가 오래되어도 rosbridge가 연결되어 있으면 정지를 요청할 수 있습니다.
 
 `RobotStopClient`는 `/M1/data` 또는 `/M2/data`에 `host_pkg/action/Burger`, `{command:"EMER_STOP",cmd_val:0}`을 보냅니다. 로봇별 대기·결과는 독립적이며 선택한 로봇만 정지합니다. Host 전체 주문이나 팔을 일시정지하지 않고 `RESTART`를 자동 전송하지 않습니다. 최종 성공 Result를 확인해야 **정지 확인**이며, 10초 timeout·오류·연결 끊김은 **정지 여부 미확인**입니다. 재연결해도 이전 요청을 자동 재전송하지 않습니다. 정확한 응답 판정과 현재 Host 백엔드의 제약은 [정지 Action 계약](HOST_CONTROL_GUIDE.md#m1m2-실물-정지-action)을 참고하세요.
+
+**M1 정지 해제·M2 정지 해제**는 같은 Action에 `{command:"RESTART",cmd_val:0}`을 명시적으로 보냅니다. 해당 로봇의 `motion_owner/communication_status`가 최근 3.5초 이내이고 실행 중 임무·대기 요청이 없어야 버튼이 활성화됩니다. AMR이 최신 odom 정지 여부도 확인하며, 해제 결과는 정지와 같은 최종 `IDLE` 성공 조건으로 확인합니다. 오류·timeout·연결 끊김은 해제 여부 미확인입니다. 이전 목표를 재개하지 않지만 잠금 해제 후 Host가 새 이동을 요청할 수 있습니다.
+
+메인 데모·실물 보기·Host 관제·로봇 제어 패널의 배터리는 `/burger1/battery_state`·`/burger2/battery_state`(`sensor_msgs/msg/BatteryState`)를 구독합니다. `voltage`를 V로 표시하고 10.5~12.3V를 0~100%로 환산해 항상 **추정 잔량**으로 표시합니다. `percentage`는 펌웨어와 드라이버의 단위 차이 때문에 사용하지 않습니다. 5초 이상 미수신·연결 끊김은 마지막 값임을 구분하고, 첫 수신 전·비정상 값은 미확인으로 표시합니다. 공개 사이트에서는 실제 배터리 값을 만들지 않고 로컬 연결을 안내합니다. [배터리 수신 계약](HOST_CONTROL_GUIDE.md#m1m2-배터리-수신)을 참고하세요.
 
 ## 수정할 파일
 
@@ -24,8 +28,9 @@ M1·M2 위치·방향은 `/burger1/amcl_pose`, `/burger2/amcl_pose`의 `map` 좌
 |---|---|
 | `ros-config.js` | 사용 여부, 접속 주소, 토픽, 메시지 타입, 전송 주기 |
 | `ros-client.js` | 연결·송신·연결 해제·재연결 및 상태 표시 |
-| `robot-stop-client.js` | M1·M2 정지 Action 요청과 요청별 최종 결과 확인 |
-| `robot-stop.js` | 메인 화면·Host 관제의 로봇별 정지 버튼과 결과 표시 |
+| `robot-stop-client.js` | M1·M2 정지·해제 Action 요청과 요청별 최종 결과 확인 |
+| `robot-stop.js` | 메인 화면·Host 관제의 로봇별 정지·해제 버튼과 결과 표시 |
+| `robot-battery-client.js` | M1·M2 배터리 수신, 전압 기반 추정 잔량과 최신 여부 판정 |
 | `app.js` | 현재 수량·재생 여부·제품명 제공 |
 | `assets/vendor/roslib-1.4.1.min.js` | 패키지에 포함한 ROS 라이브러리. CDN 접속 불필요 |
 

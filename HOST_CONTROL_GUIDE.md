@@ -2,7 +2,7 @@
 
 `control.html`은 **M1·M2·자재창고·제작공정** 네 단위의 Host 보고 상태를 표시합니다. 제작공정은 로봇팔 2·3, 리니어와 카메라 상태를 통합한 단위입니다. 지도·시뮬레이션 엔진의 경과시간과 브라우저 ACK를 사용하지 않습니다. 공개 사이트에서는 미연결 안내가 정상입니다. Host PC에서 `python3 host/server.py`를 실행하고 `http://127.0.0.1:8082/control.html`을 엽니다. 다운로드 ZIP에서는 `robot3_host/`에서 `python3 web/host/server.py`를 실행합니다.
 
-현재 제공된 Python 서버는 로컬 관제 API와 명령 대기열까지 구현했습니다. **주문 실행과 각 장치 Result를 검증하는 Host 어댑터는 아직 팀 구현 대상**입니다. 이 어댑터가 연결되기 전에는 주문·다음 단계 버튼이 비활성화됩니다. **M1 정지·M2 정지**는 별도 rosbridge 연결로 실제 로봇에 직접 요청합니다. 기존 `/?host=1`은 웹 시뮬레이션 ACK 시험으로, 실장치 관제와 별개입니다.
+현재 제공된 Python 서버는 로컬 관제 API와 명령 대기열까지 구현했습니다. **주문 실행과 각 장치 Result를 검증하는 Host 어댑터는 아직 팀 구현 대상**입니다. 이 어댑터가 연결되기 전에는 주문·다음 단계 버튼이 비활성화됩니다. M1·M2의 **정지·정지 해제와 배터리 수신**은 별도 rosbridge 연결을 사용합니다. 기존 `/?host=1`은 웹 시뮬레이션 ACK 시험으로, 실장치 관제와 별개입니다.
 
 관제에서는 **A제품/B제품**, 수량 **1개/2개**를 버튼으로 선택한 뒤 **주문 시작**을 누릅니다. 각 장치와 Host의 **로그** 버튼은 해당 기록을 작은 팝업으로 엽니다. 통신이 끊겨도 마지막으로 받은 로그는 확인할 수 있으며, 현재 상태나 최신 기록으로 간주하지 않습니다.
 
@@ -10,7 +10,7 @@
 
 ## M1·M2 실물 정지 Action
 
-메인 화면의 데모·실물 모드와 `control.html`의 **M1 정지·M2 정지**는 `robot-stop-client.js`의 `RobotStopClient`와 `robot-stop.js`를 사용합니다. HTTP `localhost`·`127.0.0.1`에서 rosbridge에 연결되면 사용할 수 있고 공개 사이트에서는 비활성화됩니다. HTTP Host 어댑터 미연결·명령 처리 중·오래된 장치 보고는 정지 요청을 막지 않습니다. 정지는 HTTP 명령 대기열을 거치지 않으며 `/api/live/stop` API는 없습니다.
+메인 화면의 데모·실물 모드와 `control.html`의 **M1 정지·M2 정지**는 `robot-stop-client.js`의 `RobotStopClient`와 `robot-stop.js`를 사용합니다. HTTP `localhost`·`127.0.0.1`에서 rosbridge에 연결되면 사용할 수 있고 공개 사이트에서는 비활성화됩니다. HTTP Host 어댑터 미연결·명령 처리 중·오래된 장치 보고는 정지 요청을 막지 않습니다. 정지·해제는 HTTP 명령 대기열을 거치지 않으며 `/api/live/stop` API는 없습니다.
 
 기존 로봇 제어 패널과 같은 rosbridge Action 계약입니다. M2는 `action`을 `/M2/data`로 바꿉니다.
 
@@ -27,7 +27,22 @@
 
 M1·M2의 대기 요청과 결과는 독립적으로 관리하며 응답의 `id`를 해당 요청과 맞춥니다. **정지 확인**은 최종 `action_result`의 `result=true`, `status=4`, `values.success=true`, `values.message="IDLE"`가 모두 맞을 때만 표시합니다. Feedback의 `IDLE`이나 WebSocket 연결만으로 성공 처리하지 않습니다. 결과가 10초 안에 오지 않거나 오류·연결 끊김이 발생하면 **정지 여부 미확인**으로 표시합니다. 로봇이 정지 잠금을 걸었어도 최신 odom으로 정지를 확인하지 못하면 `ERROR`를 반환할 수 있습니다. 재연결 시 요청을 자동 재전송하지 않고, `RESTART`도 자동 전송하지 않습니다.
 
-정지는 선택한 로봇에만 적용되며 Host 전체 주문·다른 로봇·팔을 멈추지 않습니다. 현재 `host_backend`(`4309819`)는 `playing=false`로 진행 중 공정을 중단하지 못하며, 중단된 이동의 실패 결과를 받고 이동을 재요청할 수 있습니다. AMR은 `EMER_STOP` 잠금이 유지되는 동안 새 이동을 거부합니다. 정지 해제와 전체 공정 재개는 Host의 상태를 확인한 뒤 별도로 처리해야 하며, 아래의 향후 Host 어댑터 `pause`·`resume` 계약이 현재 백엔드에 구현되어 있다는 뜻은 아닙니다.
+**M1 정지 해제·M2 정지 해제**는 위 요청의 `args`를 `{"command":"RESTART","cmd_val":0}`으로 바꿉니다. 버튼은 해당 로봇의 `/burger1/motion_owner/communication_status` 또는 `/burger2/motion_owner/communication_status`가 최근 3.5초 이내에 수신되고, 실행 중 임무와 대기 요청이 없을 때만 활성화됩니다. AMR도 이동 목표가 실행 중이면 해제를 거부하고 최신 odom으로 정지를 확인한 뒤 잠금을 해제합니다. 해제 역시 요청 ID가 일치하는 위의 최종 `IDLE` 성공 조건을 모두 만족해야 **정지 해제 확인**이며, timeout·오류·연결 끊김은 **해제 여부 미확인**입니다. `RESTART`는 사용자가 누를 때만 보내고 자동 전송·재전송하지 않습니다.
+
+정지는 선택한 로봇에만 적용되며 Host 전체 주문·다른 로봇·팔을 멈추지 않습니다. 현재 `host_backend`(`4309819`)는 `playing=false`로 진행 중 공정을 중단하지 못하며, 중단된 이동의 실패 결과를 받고 이동을 재요청할 수 있습니다. AMR은 `EMER_STOP` 잠금이 유지되는 동안 새 이동을 거부합니다. 정지 해제는 이전 이동 목표를 재개하지 않지만, 잠금이 풀린 뒤 Host가 새로 보낸 이동 명령은 실행될 수 있습니다. 해제 전에 Host의 상태를 확인해야 하며, 아래의 향후 Host 어댑터 `pause`·`resume` 계약이 현재 백엔드에 구현되어 있다는 뜻은 아닙니다.
+
+## M1·M2 배터리 수신
+
+메인 데모·실물 보기·Host 관제·기존 로봇 제어 패널에서 rosbridge로 다음 토픽을 구독합니다. HTTP Host 어댑터는 필요하지 않으며, HTTP `localhost`·`127.0.0.1`에서 사용합니다. 공개 사이트에서는 로컬 연결 안내를 표시합니다.
+
+| 로봇 | 토픽 | 메시지 |
+| --- | --- | --- |
+| M1 | `/burger1/battery_state` | `sensor_msgs/msg/BatteryState` |
+| M2 | `/burger2/battery_state` | `sensor_msgs/msg/BatteryState` |
+
+표시 값은 `voltage`(V)와 **추정 잔량**이며 계산식은 `clamp((voltage - 10.5) / (12.3 - 10.5) * 100, 0, 100)`입니다. [공식 OpenCR의 전압 기반 계산](https://github.com/ROBOTIS-GIT/OpenCR/blob/master/arduino/opencr_arduino/opencr/libraries/turtlebot3_ros2/src/turtlebot3/turtlebot3.cpp)을 따른 추정치입니다. ROS 표준의 `percentage`는 0~1이지만, 공식 펌웨어와 [TurtleBot3 드라이버](https://github.com/ROBOTIS-GIT/turtlebot3/blob/main/turtlebot3_node/src/sensors/battery_state.cpp) 조합은 0~100을 보낼 수 있어 이 필드는 사용하지 않습니다. 실제 장치의 펌웨어 버전과 전압 측정은 현장에서 확인해야 합니다.
+
+5초 이상 새 값이 없거나 rosbridge가 끊기면 마지막 값을 오래된 값으로 구분합니다. 첫 수신 전·비정상 전압·배터리 미감지 상태는 미확인으로 표시하며, 0%로 대체하지 않습니다. 전압으로 충전 중 여부를 추측하지 않습니다. 배터리 수신은 제어 명령을 보내지 않습니다.
 
 ## Host 어댑터 연결 계약
 
