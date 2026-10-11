@@ -25,6 +25,96 @@ def order(status='waiting', stage=1):
 
 
 class LiveControlTest(unittest.TestCase):
+    def test_four_communication_units_required(self):
+        self.assertEqual(DEVICES, ('M1', 'M2', 'warehouse', 'production'))
+        live = LiveControl('secret')
+        self.assertEqual(set(live.state()['devices']), set(DEVICES))
+        self.assertTrue(all(item['state'] == 'unknown' and item['log'] == []
+                            for item in live.state()['devices'].values()))
+        for names in (('M1', 'M2', 'warehouse'), (*DEVICES, 'arm1'),
+                      ('burger1', 'burger2', 'arm1', 'arm2', 'arm3')):
+            with self.subTest(devices=names):
+                invalid = report()
+                invalid['devices'] = {name: {'state': 'idle'} for name in names}
+                with self.assertRaises(ValueError): live.update(invalid, 'secret')
+                self.assertFalse(live.connected())
+        state = live.update(report(), 'secret')
+        self.assertTrue(all(item['log'] == [] for item in state['devices'].values()))
+
+    def test_product_type_preserved_in_command_and_order(self):
+        for fields, expected in (({}, 'A'), ({'product_type': 'A'}, 'A'), ({'product_type': 'B'}, 'B')):
+            with self.subTest(product=expected, fields=fields):
+                live = LiveControl('secret')
+                live.update(report(), 'secret')
+                live.issue('start', {'quantity': 2, **fields})
+                command = live.pending('secret')[0]
+                self.assertEqual(command['product_type'], expected)
+                self.assertEqual(command['quantity'], 2)
+                state = live.update(report(2, {**order(), **fields}, accepted=[command['id']]), 'secret')
+                self.assertEqual(state['order']['product_type'], expected)
+                self.assertEqual(live.pending('secret'), [])
+
+    def test_reject_invalid_product_type(self):
+        live = LiveControl('secret')
+        live.update(report(), 'secret')
+        for product_type in ('', 'C', 'a', None, True, 1, [], {}):
+            with self.subTest(product_type=product_type):
+                with self.assertRaises(ValueError):
+                    live.issue('start', {'quantity': 2, 'product_type': product_type})
+                self.assertEqual(live.pending('secret'), [])
+                with self.assertRaises(ValueError):
+                    live.update(report(2, {**order(), 'product_type': product_type}), 'secret')
+                self.assertEqual(live.revision, 1)
+
+    def test_separate_logs_remain_available_after_disconnect(self):
+        now = [0]
+        live = LiveControl('secret', clock=lambda: now[0], timeout=3)
+        incoming = report()
+        incoming['log'] = ['Host 연결 확인']
+        for name in DEVICES:
+            incoming['devices'][name]['log'] = [name + ' 수신 기록']
+        live.update(incoming, 'secret')
+        state = live.issue('start', {'quantity': 1, 'product_type': 'B'})
+        self.assertEqual(state['log'][0], 'Host 연결 확인')
+        self.assertIn('start 지시 대기', state['log'][1])
+        for name in DEVICES:
+            self.assertEqual(state['devices'][name]['log'], [name + ' 수신 기록'])
+            self.assertNotIn(name + ' 수신 기록', state['log'])
+        now[0] = 3.1
+        stale = live.state()
+        self.assertFalse(stale['bridge_connected'])
+        self.assertFalse(stale['can_advance'])
+        self.assertIsNone(stale['order'])
+        self.assertEqual(stale['conditions'], [])
+        self.assertEqual(stale['log'], state['log'])
+        for name in DEVICES:
+            self.assertEqual(stale['devices'][name]['state'], 'unknown')
+            self.assertEqual(stale['devices'][name]['log'], state['devices'][name]['log'])
+
+    def test_log_validation_and_length_limits(self):
+        live = LiveControl('secret')
+        for source in ('host', *DEVICES):
+            for entries in ('text', None, [1], ['line'] * 51):
+                with self.subTest(source=source, entries=entries):
+                    invalid = report()
+                    target = invalid if source == 'host' else invalid['devices'][source]
+                    target['log'] = entries
+                    with self.assertRaises(ValueError): live.update(invalid, 'secret')
+                    self.assertFalse(live.connected())
+        incoming = report()
+        incoming['log'] = ['x' * 201] * 50
+        for name in DEVICES:
+            incoming['devices'][name]['log'] = ['y' * 201] * 50
+        state = live.update(incoming, 'secret')
+        self.assertEqual(state['log'], ['x' * 200] * 50)
+        for name in DEVICES:
+            self.assertEqual(state['devices'][name]['log'], ['y' * 200] * 50)
+        without_logs = report(2)
+        without_logs.pop('log')
+        state = live.update(without_logs, 'secret')
+        self.assertEqual(state['log'], [])
+        self.assertTrue(all(item['log'] == [] for item in state['devices'].values()))
+
     def test_order_quantity_limits(self):
         for quantity in (1, 2):
             with self.subTest(quantity=quantity):
@@ -96,10 +186,24 @@ class LiveControlTest(unittest.TestCase):
             self.assertEqual(error.exception.code, 403)
             post('/api/live/report', report(), 'test-secret')
             self.assertTrue(json.load(urlopen(base+'/api/live/state'))['bridge_connected'])
+            large_report = report(2)
+            large_report['log'] = ['가' * 200] * 50
+            for name in DEVICES:
+                large_report['devices'][name]['log'] = ['나' * 200] * 50
+            encoded_size = len(json.dumps(large_report).encode())
+            self.assertGreater(encoded_size, 32768)
+            self.assertLess(encoded_size, 1024 * 1024)
+            state = post('/api/live/report', large_report, 'test-secret')
+            self.assertEqual(state['log'], large_report['log'])
+            for name in DEVICES:
+                self.assertEqual(state['devices'][name]['log'], large_report['devices'][name]['log'])
             with self.assertRaises(HTTPError) as error:
                 post('/api/live/start', {'quantity': 3})
             self.assertEqual(error.exception.code, 400)
-            post('/api/live/start', {'quantity': 2})
+            with self.assertRaises(HTTPError) as error:
+                post('/api/live/start', {'quantity': 2, 'product_type': 'C'})
+            self.assertEqual(error.exception.code, 400)
+            post('/api/live/start', {'quantity': 2, 'product_type': 'B'})
             with self.assertRaises(HTTPError) as error:
                 urlopen(base+'/api/live/commands')
             self.assertEqual(error.exception.code, 403)
@@ -107,6 +211,7 @@ class LiveControlTest(unittest.TestCase):
             commands = json.load(urlopen(request))
             self.assertEqual(commands[0]['action'], 'start')
             self.assertEqual(commands[0]['quantity'], 2)
+            self.assertEqual(commands[0]['product_type'], 'B')
         finally:
             server.shutdown();server.server_close();thread.join(timeout=2)
             if previous is None: os.environ.pop('ROBOT3_BRIDGE_TOKEN', None)

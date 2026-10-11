@@ -212,7 +212,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(403, {'error': '동일 호스트의 JSON 요청만 허용합니다.'})
         try:
             length = int(self.headers.get('Content-Length', '0'))
-            limit = 32768 if urlsplit(self.path).path == '/api/live/report' else 8192
+            # Reports include the Host log and four device logs, including escaped Unicode.
+            limit = 1_048_576 if urlsplit(self.path).path == '/api/live/report' else 8192
             if not 0 < length <= limit:
                 raise ValueError('잘못된 요청 크기')
             data = json.loads(self.rfile.read(length))

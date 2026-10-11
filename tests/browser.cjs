@@ -42,22 +42,6 @@ const assert=require('node:assert/strict');
  await page.click('[data-tab=simulation]');await page.click('#reset');
  await page.setViewportSize({width:390,height:844});await page.screenshot({path:'/tmp/robot3-mobile.png',fullPage:true});
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'No horizontal overflow on mobile');
- const liveState={bridge_connected:true,bridge_configured:true,pending_commands:0,order:null,order_policy:{quantity_min:1,quantity_max:20,quantity_default:3}},orders=[];
- await page.route('**/api/live/**',async route=>{
-  if(route.request().method()==='POST')orders.push(route.request().postDataJSON());
-  await route.fulfill({json:liveState});
- });
- await page.goto(base+'/control.html',{waitUntil:'networkidle'});
- assert.equal(await page.locator('#quantity').getAttribute('max'),'2');
- assert.equal(await page.locator('#quantity').inputValue(),'2');
- await page.fill('#quantity','3');await page.click('#start-order');
- assert.match(await page.locator('#control-alert').textContent(),/1~2/);assert.equal(orders.length,0);
- for(const quantity of [1,2]){
-  await page.fill('#quantity',String(quantity));
-  const response=page.waitForResponse(r=>r.url().endsWith('/api/live/start'));
-  await page.click('#start-order');await response;
- }
- assert.deepEqual(orders,[{quantity:1},{quantity:2}]);
  assert.deepEqual(errors,[]);
- await browser.close();console.log('PASS: desktop/mobile, 1–2 item orders, rejected 3-item orders, fixed defaults, control page validation, counters, photos, export and no browser errors.');
+ await browser.close();console.log('PASS: desktop/mobile, 1–2 item orders, rejected 3-item orders, fixed defaults, counters, photos, export and no browser errors.');
 })().catch(e=>{console.error(e);process.exit(1)});

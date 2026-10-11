@@ -7,7 +7,7 @@ import secrets
 import time
 from collections import deque
 
-DEVICES = ('burger1', 'burger2', 'arm1', 'arm2', 'arm3')
+DEVICES = ('M1', 'M2', 'warehouse', 'production')
 DEVICE_STATES = {'offline', 'idle', 'running', 'done', 'failed', 'unknown'}
 ORDER_STATES = {'idle', 'running', 'waiting', 'paused', 'done', 'failed'}
 
@@ -34,12 +34,15 @@ class LiveControl:
         report = self.report if connected else None
         return {
             'mode': 'live', 'order_policy': self.order_policy, 'bridge_configured': bool(self.token), 'bridge_connected': connected,
-            'devices': report['devices'] if report else {name: {'state': 'unknown', 'detail': 'Host 보고 대기'} for name in DEVICES},
+            'devices': report['devices'] if report else {
+                name: {'state': 'unknown', 'detail': 'Host 보고 대기',
+                       'log': self.report['devices'][name]['log'] if self.report else []}
+                for name in DEVICES},
             'order': report['order'] if report else None,
             'conditions': report['conditions'] if report else [],
             'can_advance': bool(report and report['can_advance'] and not self.commands),
             'pending_commands': len(self.commands),
-            'log': report['log'] if report else list(self.log),
+            'log': (self.report['log'] if self.report else []) + list(self.log),
         }
 
     def check_token(self, supplied):
@@ -52,17 +55,24 @@ class LiveControl:
             raise ValueError('증가하는 revision이 필요합니다.')
         devices = report.get('devices')
         if not isinstance(devices, dict) or set(devices) != set(DEVICES):
-            raise ValueError('장치 5개의 상태가 필요합니다.')
+            raise ValueError('M1, M2, warehouse, production 통신 단위 4개의 상태가 필요합니다.')
         normalized = {}
         for name in DEVICES:
             item = devices[name]
             if not isinstance(item, dict) or item.get('state') not in DEVICE_STATES or not isinstance(item.get('detail', ''), str):
                 raise ValueError(f'{name} 상태 형식 오류')
-            normalized[name] = {'state': item['state'], 'detail': item.get('detail', '')[:160]}
+            entries = item.get('log', [])
+            if not isinstance(entries, list) or len(entries) > 50 or any(not isinstance(x, str) for x in entries):
+                raise ValueError(f'{name} 기록 형식 오류')
+            normalized[name] = {'state': item['state'], 'detail': item.get('detail', '')[:160],
+                                'log': [x[:200] for x in entries]}
         order = report.get('order')
         if order is not None:
             if not isinstance(order, dict) or order.get('status') not in ORDER_STATES:
                 raise ValueError('주문 상태 형식 오류')
+            product_type = order.get('product_type', 'A')
+            if product_type not in ('A', 'B'):
+                raise ValueError('제품은 A 또는 B여야 합니다.')
             for key in ('quantity', 'transport_remaining', 'product_remaining', 'completed', 'stage', 'stage_count'):
                 value = order.get(key)
                 if type(value) is not int or value < 0 or value > (100 if key in ('stage', 'stage_count') else self.order_policy['quantity_max']):
@@ -70,6 +80,7 @@ class LiveControl:
             if not isinstance(order.get('id', ''), str):
                 raise ValueError('주문 ID 형식 오류')
             order = {key: order.get(key) for key in ('id', 'status', 'quantity', 'transport_remaining', 'product_remaining', 'completed', 'stage', 'stage_count')}
+            order['product_type'] = product_type
         conditions = report.get('conditions', [])
         if not isinstance(conditions, list) or len(conditions) > 30:
             raise ValueError('조건 목록 형식 오류')
@@ -103,6 +114,9 @@ class LiveControl:
             raise ValueError('이전 지시의 수락을 기다리는 중입니다.')
         order = self.report['order']
         if action == 'start':
+            product_type = payload.get('product_type', 'A')
+            if product_type not in ('A', 'B'):
+                raise ValueError('제품은 A 또는 B여야 합니다.')
             quantity = payload.get('quantity')
             if type(quantity) is not int or not self.order_policy['quantity_min'] <= quantity <= self.order_policy['quantity_max']:
                 raise ValueError('주문 수량 범위를 확인하세요.')
@@ -110,7 +124,7 @@ class LiveControl:
                 raise ValueError('주문 지시의 결과를 기다리는 중입니다.')
             if order and order['status'] not in ('idle', 'done'):
                 raise ValueError('진행 중인 주문이 있습니다.')
-            command = {'action': action, 'quantity': quantity}
+            command = {'action': action, 'product_type': product_type, 'quantity': quantity}
         elif action == 'next':
             if not self.report['can_advance']:
                 raise ValueError('완료 조건을 모두 확인한 뒤에만 다음 단계로 이동합니다.')
