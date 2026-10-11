@@ -36,7 +36,13 @@ bash start_host.sh
 
 Host PC 브라우저에서 `http://localhost:8082/`를 열고 **로봇 제어 ↗**를 누릅니다. 실행 스크립트는 ROS 환경과 Action 타입을 불러오고 `ROS_DOMAIN_ID=40`, `ROS_LOCALHOST_ONLY=0`으로 `host/host_control.launch.py`를 실행합니다. 두 서버는 같은 PC에서만 접속하도록 바인딩합니다. 로봇과 Host의 네트워크·DDS 검색 설정도 서로 맞아야 합니다.
 
-각 이동 로봇은 Pi에서 `host-ready` 준비를 마쳐 `process` 모드와 Action 서버가 실행 중이어야 합니다. 이 런치는 개별 제어·실제 상태 확인용이며, 전체 공정 제어기 `host_backend/src/host_pkg/src/main.py`와 로봇 준비 명령은 실행하지 않습니다. 시작할 때 이동 명령도 보내지 않습니다.
+시작할 때 **M1·M2 관제 준비**(`host/robot_prepare.py`)도 함께 실행합니다. 각 로봇에 SSH로 접속해 로봇 안의 `host_prepare.py`를 실행하며, 본체(모터·라이다) 시작 → 위치추정·Nav2 확인 → 모터 토크 → Action 서버 확인 → `process` 모드로 바꿉니다. **이동 명령은 보내지 않습니다.** 준비 로그는 같은 터미널에 `[robot_prepare-N] [버거1] ...`로 표시되고, 실패하면 30초 뒤 최대 2번 다시 시도합니다. 준비가 끝나거나 실패해도 웹·rosbridge는 계속 실행됩니다. 전체 공정 제어기 `host_backend/src/host_pkg/src/main.py`는 실행하지 않습니다.
+
+- 로봇이 자기 주차 자리에 원래 방향으로 놓여 있을 때: `bash start_host.sh parked:=true` (주차 좌표를 초기 위치로 넣고, 중단된 도킹 표시를 정리)
+- 준비 없이 웹·rosbridge만: `bash start_host.sh robot_prepare:=false`
+- 실행 중에 한 로봇만 다시 준비: `python3 host/robot_prepare.py --robots burger1` (주차 자리면 `--parked` 추가)
+- SSH는 키 인증만 씁니다. 처음 한 번 `ssh-copy-id ubuntu@10.10.142.101`, `ssh-copy-id ubuntu@10.10.142.102`로 키를 등록하세요. 로봇 주소가 다르면 환경변수 `BURGER1_SSH`, `BURGER2_SSH`로 바꿉니다.
+- 긴급정지 래치는 준비 단계에서 풀지 않습니다. 정지가 걸려 있었다면 패널의 **정지 해제**(`RESTART`)를 직접 누르세요.
 
 `Ctrl+C`로 웹 서버·rosbridge·rosapi를 함께 종료합니다. **웹 통신 종료는 로봇 정지 명령이 아니므로, 이동 중인 로봇은 먼저 패널의 정지 버튼으로 정지 결과를 확인하세요.** 필수 프로세스 하나가 종료되면 나머지도 정리합니다. 8082 또는 9090 포트가 이미 사용 중이면 기존 서버를 종료하라는 오류를 표시합니다.
 
