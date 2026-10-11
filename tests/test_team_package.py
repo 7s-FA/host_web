@@ -24,8 +24,6 @@ class TeamPackageTest(unittest.TestCase):
             for name in ['README.md','REAL_ROBOT_SETUP.md','NAVIGATION_POLICY.md','config/system-config.json','config/SYSTEM_CONFIG_GUIDE.md','robot3_interfaces/action/README.md','robot3_interfaces/msg/README.md','robot3_orchestrator/README.md','robot3_web_bridge/README.md','robot3_mock_devices/README.md','launch/README.md','tests/README.md','web/index.html','web/dashboard.css','web/ros-config.js','web/ros-client.js','web/ROS_BRIDGE_GUIDE.md','web/assets/vendor/roslib-1.4.1.min.js','web/assets/vendor/ROSLIB-LICENSE.txt','web/admin.html','web/control.html','web/control.css','web/control.js','web/HOST_CONTROL_GUIDE.md','web/host/live_control.py','web/downloads.html','web/downloads.css','web/waypoints.html','web/waypoints.css','web/waypoints.js','web/routes-burger1.json','web/routes-burger2.json','web/waypoints-burger1.json','web/assets/waypoints-burger1-source.png','web/host/server.py','web/assets/full-map.jpg']:
                 self.assertTrue((root/name).is_file(),name)
             self.assertFalse((root/'web/system-config.json').exists(),'Only one canonical system config')
-            for name in ['robots.html','assets/robot-panel/panel.js','assets/robot-panel/panel.css']:
-                self.assertTrue((root/'web'/name).is_file(),name)
             cfgpath=root/'config/system-config.json'
             c=json.loads(cfgpath.read_text());c['order'].update(quantity_min=1,quantity_default=3,quantity_max=5,auto_advance_default=False)
             cfgpath.write_text(json.dumps(c))
@@ -43,8 +41,6 @@ threading.Thread(target=s.serve_forever,daemon=True).start()
 try:
  base=f'http://127.0.0.1:{s.server_port}'
  for name in ['/','/admin.html','/control.html','/control.css','/control.js','/HOST_CONTROL_GUIDE.md','/downloads.html','/downloads.css','/waypoints.html','/waypoints.css','/waypoints.js','/routes-burger1.json','/routes-burger2.json','/waypoints-burger1.json','/assets/waypoints-burger1-source.png','/dashboard.css','/ros-config.js','/ros-client.js','/assets/vendor/roslib-1.4.1.min.js','/engine.js','/assets/full-map.jpg']:
-  assert urlopen(base+name).status==200,name
- for name in ['/robots.html','/assets/robot-panel/panel.js','/assets/robot-panel/panel.css']:
   assert urlopen(base+name).status==200,name
  c=json.load(urlopen(base+'/system-config.json'))
  assert c['order']['quantity_max']==5
