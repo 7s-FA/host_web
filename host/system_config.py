@@ -19,8 +19,8 @@ def validate(config):
     number(o['quantity_min'], 1, 2, True)
     number(o['quantity_max'], o['quantity_min'], 2, True)
     number(o['quantity_default'], o['quantity_min'], o['quantity_max'], True)
-    if o['product_type'] != 'A' or o['parts_per_product'] != 3 or type(o['auto_advance_default']) is not bool:
-        raise ValueError('현재 엔진은 A제품·부품 3개만 지원하며 자동 진행은 boolean입니다.')
+    if o['product_type'] not in ('A', 'B') or o['parts_per_product'] != 3 or type(o['auto_advance_default']) is not bool:
+        raise ValueError('현재 엔진은 A/B제품·부품 3개를 지원하며 자동 진행은 boolean입니다.')
     number(c['web_host']['port'], 1024, 65535, True)
     number(c['web_host']['browser_timeout_seconds'], 1, 60)
     nav = c['navigation']

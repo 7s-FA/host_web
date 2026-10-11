@@ -24,7 +24,7 @@ class HostTest(unittest.TestCase):
         self.serial = 0
         self.send('connect')
         self.assertEqual(self.h.state()['scenario_mode'], 'destination-v2')
-        self.assertEqual(self.h.state()['sample_stage_count'], len(m.SCENARIOS['2']))
+        self.assertEqual(self.h.state()['sample_stage_count'], len(m.SCENARIOS['A']['2']))
 
     def test_server_settings_snapshot(self):
         self.assertEqual(self.h.state()['simulation_config'], m.SCENARIO_CONFIG)
@@ -38,28 +38,49 @@ class HostTest(unittest.TestCase):
         c = self.h.pending
         return self.send('ack', order_id=c['order_id'], seq=c['seq'], time=c['target_time'])
 
-    def test_all_quantities_manual_and_auto(self):
-        for q in (1,2):
-            for auto in (False, True):
-                self.send('reset')
-                self.send('auto', enabled=auto)
-                s = self.send('start', quantity=q)
-                steps = 0
-                while s['status'] != 'done':
-                    if s['status'] == 'waiting':
-                        s = self.send('next')
-                    c = s['command']
-                    s = self.ack()
-                    before = (self.h.index, self.h.pending)
-                    duplicate = self.send('ack', order_id=c['order_id'], seq=c['seq'], time=c['target_time'])
-                    self.assertEqual(before, (self.h.index, self.h.pending))
-                    self.assertGreaterEqual(duplicate['counters']['remaining'], 0)
-                    steps += 1
-                self.assertEqual(steps, len(m.SCENARIOS[str(q)]))
-                self.assertEqual(s['counters']['completed'], q)
-                self.assertEqual(s['counters']['transport'], 0)
-                self.assertEqual(s['counters']['remaining'], 0)
-                self.assertTrue(s['counters']['done'])
+    def test_all_products_and_quantities_manual_and_auto(self):
+        for product_type in ('A', 'B'):
+            for q in (1, 2):
+                for auto in (False, True):
+                    with self.subTest(product_type=product_type, quantity=q, auto=auto):
+                        self.send('reset')
+                        self.send('auto', enabled=auto)
+                        s = self.send('start', quantity=q, product_type=product_type)
+                        self.assertEqual(s['product_type'], product_type)
+                        self.assertIn(f'{product_type}제품 {q}개', s['log'][-2]['detail'])
+                        steps = 0
+                        events = []
+                        while s['status'] != 'done':
+                            if s['status'] == 'waiting':
+                                s = self.send('next')
+                            c = s['command']
+                            events.extend(c['events'])
+                            s = self.ack()
+                            self.assertEqual(s['product_type'], product_type)
+                            before = (self.h.index, self.h.pending)
+                            duplicate = self.send('ack', order_id=c['order_id'], seq=c['seq'], time=c['target_time'])
+                            self.assertEqual(before, (self.h.index, self.h.pending))
+                            self.assertGreaterEqual(duplicate['counters']['remaining'], 0)
+                            steps += 1
+                        self.assertEqual(steps, len(m.SCENARIOS[product_type][str(q)]))
+                        self.assertTrue(all(f'{product_type}지그' in e['text'] for e in events if e['kind'] in ('jig_start', 'jig_ready')))
+                        self.assertIn(f'{product_type}제품 {q}개', events[-1]['text'])
+                        self.assertEqual(s['counters']['completed'], q)
+                        self.assertEqual(s['counters']['transport'], 0)
+                        self.assertEqual(s['counters']['remaining'], 0)
+                        self.assertTrue(s['counters']['done'])
+
+    def test_product_validation_and_default(self):
+        for product_type in ('', 'C', 'a', None, True, 1, [], {}):
+            with self.subTest(product_type=product_type):
+                with self.assertRaises(ValueError):
+                    self.send('start', quantity=1, product_type=product_type)
+                self.assertEqual(self.h.state()['status'], 'idle')
+        self.assertEqual(self.send('start', quantity=1)['product_type'], 'A')
+        self.send('reset')
+        self.send('start', quantity=2, product_type='B')
+        self.assertEqual(self.send('heartbeat')['product_type'], 'B')
+        self.assertEqual(self.send('reset')['product_type'], 'A')
 
     def test_invalid_and_out_of_order(self):
         for q in (0,3,20,True,1.5,'2'):
@@ -137,7 +158,11 @@ class HTTPTest(unittest.TestCase):
             with self.assertRaises(urllib.error.HTTPError) as invalid_quantity:
                 post('start',quantity=3)
             self.assertEqual(invalid_quantity.exception.code,400)
-            s=post('start',quantity=2)
+            with self.assertRaises(urllib.error.HTTPError) as invalid_product:
+                post('start',quantity=2,product_type='C')
+            self.assertEqual(invalid_product.exception.code,400)
+            s=post('start',quantity=2,product_type='B')
+            self.assertEqual(s['product_type'],'B')
             c=s['command']
             self.assertEqual(post('ack',order_id=c['order_id'],seq=c['seq'],time=c['target_time'])['status'],'waiting')
             with self.assertRaises(urllib.error.HTTPError): post('reset',origin='https://example.com')

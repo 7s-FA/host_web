@@ -58,12 +58,16 @@ try:
  try:post('start',{'quantity':3})
  except HTTPError as error:assert error.code==400
  else:raise AssertionError('Three-item order accepted')
- state=post('start',{'quantity':2})
+ state=post('start',{'quantity':2,'product_type':'B'})
+ assert state['product_type']=='B'
+ assert any('B제품 2개' in e['text'] for e in state['command']['events'])
  while state['status']!='done':
   cmd=state['command']
   if cmd: state=post('ack',{'message_id':'ack'+str(cmd['seq']),'order_id':cmd['order_id'],'seq':cmd['seq'],'time':cmd['target_time']})
   if state['status']=='waiting': state=post('next',{'message_id':'next'+str(state['acked_seq'])})
  assert state['counters']['completed']==2
+ assert state['product_type']=='B'
+ assert 'B제품 2개' in state['counters']['events'][-1]['text']
 finally:s.shutdown();s.server_close()
 '''
             subprocess.run([sys.executable,'-c',program,str(root/'web/host')],cwd=tmp,check=True,timeout=30,capture_output=True)

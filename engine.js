@@ -20,8 +20,9 @@
   };
   const ROBOT_VIA = [BURGER1_VIA,BURGER2_VIA];
   const NAME = {home:'초기위치',waiting:'대기장소',warehouse:'자재창고',assembly:'제작공정'};
-  function makePlan(quantity, config=Settings.defaults) {
+  function makePlan(quantity, config=Settings.defaults, productType='A') {
     config=Settings.validate(config);
+    if (!['A','B'].includes(productType)) throw new RangeError('제품은 A 또는 B를 선택하세요.');
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 2) throw new RangeError('주문 수량은 1~2 사이의 정수로 입력하세요.');
     const tasks=[], events=[], jobs=[], tails=[0,0];
     let serial=0;
@@ -48,7 +49,7 @@
       event(end,'arrive',{robot,from,to,job,text:`M${robot+1} · ${NAME[to]} ${to==='waiting'?'전진 주차 완료':'도착'} · 후방 감지선 도달·정지`,photo:to==='waiting'?'waiting':to==='home'?'home':to==='assembly'?'process':'warehouse'});
       return end;
     }
-    event(0,'order',{quantity,text:`Host 주문 접수 · A제품 ${quantity}개 / 두 카운트 ${quantity}로 설정`,photo:'route'});
+    event(0,'order',{quantity,text:`Host 주문 접수 · ${productType}제품 ${quantity}개 / 두 카운트 ${quantity}로 설정`,photo:'route'});
     for(let i=0;i<quantity;i++) {
       const robot=i%2, prior=jobs[i-1], prevOwn=jobs[i-2];
       let warehouseStart;
@@ -68,8 +69,8 @@
       const arrived=move(robot,'warehouse','assembly',dispatch,5,i);
       const jigStart=prior?prior.palletEnd:0, jigReady=jigStart+config.process.linearPrepareSeconds;
       task('linear','prepare',jigStart,jigReady,{job:i});
-      event(jigStart,'jig_start',{job:i,text:`리니어 모터 · A지그 위치로 이동`,photo:'process'});
-      event(jigReady,'jig_ready',{job:i,text:`리니어 모터 · A지그 위치 도달`,photo:'process'});
+      event(jigStart,'jig_start',{job:i,text:`리니어 모터 · ${productType}지그 위치로 이동`,photo:'process'});
+      event(jigReady,'jig_ready',{job:i,text:`리니어 모터 · ${productType}지그 위치 도달`,photo:'process'});
       const assemblyStart=Math.max(arrived,jigReady), assemblyEnd=assemblyStart+config.process.assemblySeconds;
       task('arm2','assemble',assemblyStart,assemblyEnd,{robot,job:i});
       event(assemblyStart,'assembly_start',{robot,job:i,text:`로봇팔 2 · 제품 #${i+1} 티칭 조립 시작`,photo:'assembly'});
@@ -94,9 +95,9 @@
     }
     const last=jobs[quantity-1];
     const duration=Math.max(...tails,last.palletEnd);
-    event(duration,'complete',{text:`주문 완료 · A제품 ${quantity}개 적재 / M1·M2 초기위치 확인`,photo:'pallet'});
+    event(duration,'complete',{text:`주문 완료 · ${productType}제품 ${quantity}개 적재 / M1·M2 초기위치 확인`,photo:'pallet'});
     events.sort((a,b)=>a.time-b.time||a.serial-b.serial);
-    return {quantity,tasks,events,jobs,duration,config};
+    return {quantity,productType,tasks,events,jobs,duration,config};
   }
   function point(place,robot) {return POINTS[place==='home'?'home'+(robot+1):place];}
   function path(from,to,robot) {
@@ -209,7 +210,7 @@
   function snapshot(plan,time) {
     time=Math.max(0,Math.min(plan.duration,time));
     const robots=[0,1].map(i=>({id:i,place:'home',status:'초기위치 대기',parts:0,job:null,heading:DOCK_HEADINGS.home,position:point('home',i)}));
-    const state={time,quantity:plan.quantity,transport:plan.quantity,remaining:plan.quantity,completed:0,robots,linear:0,arms:['대기','대기','대기'],events:[],done:false};
+    const state={time,quantity:plan.quantity,productType:plan.productType,transport:plan.quantity,remaining:plan.quantity,completed:0,robots,linear:0,arms:['대기','대기','대기'],events:[],done:false};
     for(const e of plan.events) {
       if(e.time>time+1e-7)break;
       state.events.push(e);const r=robots[e.robot];
@@ -249,8 +250,8 @@
     state.focus=[...state.active].sort((a,b)=>({pallet:5,assemble:4,load:3,move:2,prepare:1,reset:1,gate:0}[b.type]||0)-({pallet:5,assemble:4,load:3,move:2,prepare:1,reset:1,gate:0}[a.type]||0))[0];
     return state;
   }
-function stagesFor(quantity,config=Settings.defaults){
- const p=makePlan(quantity,config);
+function stagesFor(quantity,config=Settings.defaults,productType='A'){
+ const p=makePlan(quantity,config,productType);
  const completed=e=>['arrive','assembly_end','jig_ready','jig_home','pallet_end','complete'].includes(e.kind)||(e.kind==='part'&&e.part===3);
  // A global ACK barrier must never freeze another robot halfway through its trip.
  // Keep turns/drives inside each move; pause only when every moving robot has

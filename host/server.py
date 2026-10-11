@@ -30,6 +30,7 @@ class Host:
         self.status = 'idle'
         self.order_id = None
         self.quantity = 0
+        self.product_type = self.config['order']['product_type']
         self.index = -1
         self.pending = None
         self.auto = self.config['order']['auto_advance_default']
@@ -46,16 +47,16 @@ class Host:
 
     def state(self):
         self.check_timeout()
-        stage = SCENARIOS[str(self.quantity)][self.index] if self.index >= 0 else None
+        stage = SCENARIOS[self.product_type][str(self.quantity)][self.index] if self.index >= 0 else None
         return {'order_policy': self.config['order'], 'simulation_config': SCENARIO_CONFIG, 'protocol': 1, 'scenario_mode': 'destination-v2',
-                'sample_stage_count': len(SCENARIOS['2']),
-                'stage_count': len(SCENARIOS[str(self.quantity)]) if self.quantity else 0, 'status': self.status, 'order_id': self.order_id,
-                'quantity': self.quantity, 'acked_seq': self.index + 1,
+                'sample_stage_count': len(SCENARIOS[self.product_type]['2']),
+                'stage_count': len(SCENARIOS[self.product_type][str(self.quantity)]) if self.quantity else 0, 'status': self.status, 'order_id': self.order_id,
+                'quantity': self.quantity, 'product_type': self.product_type, 'acked_seq': self.index + 1,
                 'time': stage['time'] if stage else 0, 'counters': stage,
                 'command': self.pending, 'auto': self.auto, 'log': list(self.log)}
 
     def issue(self):
-        stages = SCENARIOS[str(self.quantity)]
+        stages = SCENARIOS[self.product_type][str(self.quantity)]
         if self.index + 1 >= len(stages):
             self.status = 'done'
             return
@@ -88,16 +89,20 @@ class Host:
             return self.state()
         if action == 'start':
             q = data.get('quantity')
+            product_type = data.get('product_type', 'A')
+            if product_type not in ('A', 'B'):
+                raise ValueError('제품은 A 또는 B를 선택하세요.')
             policy = self.config['order']
             if type(q) is not int or not policy['quantity_min'] <= q <= policy['quantity_max']:
                 raise ValueError(f"수량은 {policy['quantity_min']}~{policy['quantity_max']} 정수여야 합니다.")
             if self.status not in ('idle', 'done'):
                 raise ValueError('현재 주문을 초기화한 뒤 새 주문을 시작하세요.')
             self.quantity, self.index = q, -1
+            self.product_type = product_type
             self.order_id = secrets.token_hex(8)
             self.pending = None
             self.status = 'waiting'
-            self.note('ORDER', f'A제품 {q}개 · {self.order_id}')
+            self.note('ORDER', f'{self.product_type}제품 {q}개 · {self.order_id}')
             self.issue()
         elif action == 'next':
             if self.status != 'waiting':
@@ -118,7 +123,7 @@ class Host:
             self.index += 1
             self.pending = None
             self.note('ACK', f'단계 {seq} 완료 수신')
-            final = self.index == len(SCENARIOS[str(self.quantity)]) - 1
+            final = self.index == len(SCENARIOS[self.product_type][str(self.quantity)]) - 1
             self.status = 'done' if final else 'waiting'
             if final:
                 self.note('DONE', '파렛트 적재 및 버거 복귀 완료')
@@ -144,6 +149,7 @@ class Host:
                 self.issue()
         elif action in ('reset', 'disconnect'):
             self.status, self.quantity, self.index = 'idle', 0, -1
+            self.product_type = self.config['order']['product_type']
             self.order_id = self.pending = None
             self.note('RESET', '시험 주문 초기화')
             if action == 'disconnect':
@@ -250,7 +256,7 @@ if __name__ == '__main__':
     with make_server(args.port) as server:
         print(f'Host PC 시험 화면: http://127.0.0.1:{server.server_port}/?host=1', flush=True)
         print(f'실장치 관제 화면: http://127.0.0.1:{server.server_port}/control.html', flush=True)
-        print(f'목적지 단위 v2 · A제품 2개: {len(SCENARIOS["2"])}단계 · {ROOT}', flush=True)
+        print(f'목적지 단위 v2 · A/B제품 2개: {len(SCENARIOS["A"]["2"])}단계 · {ROOT}', flush=True)
         print('Ctrl+C로 종료 · git pull 후에는 서버를 종료하고 다시 실행하세요.', flush=True)
         try:
             server.serve_forever()

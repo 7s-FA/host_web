@@ -15,6 +15,19 @@ class SystemConfigTest(unittest.TestCase):
             c['order']['quantity_default']=quantity
             self.assertEqual(validate(c)['order']['quantity_default'],quantity)
 
+    def test_product_defaults(self):
+        for product_type in ('A', 'B'):
+            c=load();c['order']['product_type']=product_type
+            h=Host(system_config=validate(c))
+            h.handle('connect',{'client_id':'test-client'})
+            self.assertEqual(h.state()['product_type'],product_type)
+            h.handle('start',{'client_id':'test-client','message_id':'start','quantity':1,'product_type':'B'})
+            state=h.handle('reset',{'client_id':'test-client','message_id':'reset'})
+            self.assertEqual(state['product_type'],product_type)
+        for product_type in ('', 'C', 'a', None, True, 1, [], {}):
+            c=load();c['order']['product_type']=product_type
+            with self.assertRaises(ValueError):validate(c)
+
     def test_reject_bad_config(self):
         for path, value in [(('order','quantity_min'),3),(('order','quantity_max'),3),(('order','quantity_max'),20),(('order','quantity_default'),0),(('order','quantity_default'),3),(('web_host','browser_timeout_seconds'),-1),(('ros2','domain_id'),True)]:
             c=load();c[path[0]][path[1]]=value

@@ -50,15 +50,15 @@
   });
   queue=op.catch(()=>{});return op;
  }
- bridge.start=quantity=>call('start',{quantity});
+ bridge.start=(quantity,productType='A')=>call('start',{quantity,product_type:productType});
  let stepBusy=false;
- bridge.step=async quantity=>{
+ bridge.step=async (quantity,productType='A')=>{
   if(stepBusy||!bridge.online||!['idle','done','waiting'].includes(bridge.state?.status))return;
   stepBusy=true;
   try{
    const s=await call('auto',{enabled:false});
    if(!s)return;
-   if(['idle','done'].includes(s.status))return await call('start',{quantity});
+   if(['idle','done'].includes(s.status))return await call('start',{quantity,product_type:productType});
    if(s.status==='waiting')return await call('next');
   }finally{stepBusy=false;}
  };

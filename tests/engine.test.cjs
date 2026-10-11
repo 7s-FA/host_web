@@ -1,7 +1,7 @@
 // Keep reference assertions stable when a maintainer edits config.js.
 Object.assign(require('../settings.js').defaults, structuredClone(require('./baseline-config.cjs')));
 const assert=require('node:assert/strict');
-const {makePlan,snapshot}=require('../engine.js');
+const {makePlan,snapshot,stagesFor}=require('../engine.js');
 let cases=0;
 for(const n of [1,2]){
  const p=makePlan(n),end=snapshot(p,p.duration);
@@ -182,3 +182,25 @@ for(const robot of [0,1]){
  assert.deepEqual(path('waiting','home',robot),robot===0?[POINTS.waiting,[340,880],[340,795],[340,750],[340,700],home]:[POINTS.waiting,[340,880],[340,home[1]],home]);
 }
 console.log('PASS: Both robots use shared waypoints and return through their own home junctions.');
+
+// Product selection changes order/jig labels while retaining the shared demo motion.
+const generatedScenarios=require('../host/scenarios.json');
+const scenarioConfig=require('../host/scenario-config.json');
+for(const productType of ['A','B'])for(const quantity of [1,2]){
+ const plan=makePlan(quantity,undefined,productType),reference=makePlan(quantity);
+ assert.equal(plan.productType,productType);
+ assert.equal(snapshot(plan,plan.duration).productType,productType);
+ assert.deepEqual(plan.tasks,reference.tasks);
+ assert.equal(plan.duration,reference.duration);
+ assert(plan.events.find(e=>e.kind==='order').text.includes(`${productType}제품 ${quantity}개`));
+ assert(plan.events.find(e=>e.kind==='complete').text.includes(`${productType}제품 ${quantity}개`));
+ assert(plan.events.filter(e=>['jig_start','jig_ready'].includes(e.kind)).every(e=>e.text.includes(`${productType}지그`)));
+ assert.deepEqual(stagesFor(quantity,undefined,productType).flatMap(stage=>stage.events),plan.events);
+ assert.deepEqual(generatedScenarios[productType][quantity],stagesFor(quantity,scenarioConfig,productType));
+}
+assert.equal(makePlan(1).productType,'A');
+for(const productType of ['', 'C', 'a', null, true, 1, [], {}]){
+ assert.throws(()=>makePlan(1,undefined,productType));
+ assert.throws(()=>stagesFor(1,undefined,productType));
+}
+console.log('PASS: A/B order identity, product/jig labels, shared motion, generated Host stages and invalid product rejection.');

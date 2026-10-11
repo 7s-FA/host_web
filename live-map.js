@@ -35,7 +35,9 @@ window.LiveMap=(()=>{
   set('scene-kicker','ON-SITE REFERENCE');set('scene-title','현장 배치 참고 사진');
   set('scene-detail','현재 화면의 지도는 실제 수신 상태를 표시하고, 사진은 배치 참고용입니다.');
   set('pallet-count','적재 상태 미연결');
-  for(const id of ['start','step-order','play','reset','next','previous','timeline','quantity','plus','minus','product','host-connect','host-next','host-pause','host-reset','host-auto','ros-connect','follow','export'])el(id).disabled=true;
+  for(const id of ['start','step-order','play','reset','next','previous','timeline','quantity','product','host-connect','host-next','host-pause','host-reset','host-auto','ros-connect','follow','export'])el(id).disabled=true;
+  for(const button of document.querySelectorAll('#order-form button'))button.disabled=true;
+  el('order-selection').hidden=true;
   for(const i of [0,1])el('navigation-b'+(i+1)).onclick=()=>{selected=i;};
   const local=location.protocol==='http:'&&['localhost','127.0.0.1'].includes(location.hostname);
   if(local){client=LiveMapClient.create({url:LIVE_MAP_CONFIG.url});client.start();window.addEventListener('pagehide',()=>client.stop());}
