@@ -1,7 +1,7 @@
 _site/
 node_modules/
 __pycache__/
-*.pyc
+*.py[cod]
 .DS_Store
 .env
 .env.*
@@ -9,3 +9,15 @@ robot3-simulation.html
 *.zip
 test-results/
 playwright-report/
+
+# Local Python environments and test caches
+.venv/
+venv/
+.pytest_cache/
+
+# Runtime logs, editor backups and OS metadata
+*.log
+*.swp
+*.swo
+*~
+Thumbs.db
