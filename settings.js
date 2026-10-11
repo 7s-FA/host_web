@@ -3,12 +3,12 @@
  'use strict';
  const defaults=typeof module!=='undefined'&&module.exports?require('./config.js'):root.SIMULATION_CONFIG;
  const fields=[
-  ['burger1','forwardSpeed','버거 1 전진 속도','배',.25,3,.05],
-  ['burger1','reverseSpeed','버거 1 후진 속도','배',.25,3,.05],
-  ['burger1','turnSpeed','버거 1 회전 속도','°/초',15,180,5],
-  ['burger2','forwardSpeed','버거 2 전진 속도','배',.25,3,.05],
-  ['burger2','reverseSpeed','버거 2 후진 속도','배',.25,3,.05],
-  ['burger2','turnSpeed','버거 2 회전 속도','°/초',15,180,5],
+  ['burger1','forwardSpeed','M1 전진 속도','배',.25,3,.05],
+  ['burger1','reverseSpeed','M1 후진 속도','배',.25,3,.05],
+  ['burger1','turnSpeed','M1 회전 속도','°/초',15,180,5],
+  ['burger2','forwardSpeed','M2 전진 속도','배',.25,3,.05],
+  ['burger2','reverseSpeed','M2 후진 속도','배',.25,3,.05],
+  ['burger2','turnSpeed','M2 회전 속도','°/초',15,180,5],
   ['process','loadPartSeconds','팔 1 부품 1개 적재 시간','초',.1,60,.1],
   ['process','assemblySeconds','팔 2 조립 시간','초',.1,120,.1],
   ['process','linearPrepareSeconds','리니어 A지그 준비 시간','초',.1,60,.1],

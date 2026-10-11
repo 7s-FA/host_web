@@ -50,5 +50,5 @@ def generate_launch_description():
             name='host_web',
             output='screen',
         ),
-        LogInfo(msg='Host PC 브라우저: http://localhost:8082/ → 로봇 제어 ↗ | Ctrl+C: 웹·rosbridge 종료'),
+        LogInfo(msg='실물 상태: http://localhost:8082/?live=1 | 시뮬레이션: http://localhost:8082/ | Ctrl+C: 웹·rosbridge 종료'),
     ])

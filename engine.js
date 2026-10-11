@@ -37,15 +37,15 @@
       const navigation=navigationFor(from,to,robot,motion);
       task(robot,'move',start,end,{from,to,job,motion,navigation,via:ROBOT_VIA[robot][from+':'+to]||[]});
       for(const step of navigation){
-        if(step.end>step.start)event(start+step.start,'navigation_start',{robot,from,to,job,phase:step.code,controller:step.controller,text:`버거 ${robot+1} · ${step.label}`,photo:to==='warehouse'?'warehouse':'route'});
-        event(start+step.end,'navigation_done',{robot,from,to,job,phase:step.code,controller:step.controller,text:`버거 ${robot+1} · ${step.condition} · 모의 완료`,photo:to==='warehouse'?'warehouse':'route'});
+        if(step.end>step.start)event(start+step.start,'navigation_start',{robot,from,to,job,phase:step.code,controller:step.controller,text:`M${robot+1} · ${step.label}`,photo:to==='warehouse'?'warehouse':'route'});
+        event(start+step.end,'navigation_done',{robot,from,to,job,phase:step.code,controller:step.controller,text:`M${robot+1} · ${step.condition} · 모의 완료`,photo:to==='warehouse'?'warehouse':'route'});
       }
-      event(start,'move_start',{robot,from,to,job,text:`버거 ${robot+1} · ${NAME[to]}로 이동`,photo:to==='warehouse'?'warehouse':to==='home'?'home':'route'});
+      event(start,'move_start',{robot,from,to,job,text:`M${robot+1} · ${NAME[to]}로 이동`,photo:to==='warehouse'?'warehouse':to==='home'?'home':'route'});
       for(const phase of motion){
-        if(phase.type==='turn')event(start+phase.start,'turn_start',{robot,from,to,job,text:`버거 ${robot+1} · 정지 후 ${Math.abs(phase.delta)===180?'180° 방향 전환':phase.delta>0?'우회전 90°':'좌회전 90°'}`,photo:'route'});
-        else event(start+phase.start,phase.reversing?'reverse_start':'drive_start',{robot,from,to,job,text:`버거 ${robot+1} · ${phase.parking?'대기장소 전진 주차':phase.reversing?`${NAME[from]} 10cm 후진 · 로컬 cmd_vel 출차`:'전방 정렬 완료 · 직선 주행'}`,photo:phase.parking?'waiting':'route'});
+        if(phase.type==='turn')event(start+phase.start,'turn_start',{robot,from,to,job,text:`M${robot+1} · 정지 후 ${Math.abs(phase.delta)===180?'180° 방향 전환':phase.delta>0?'우회전 90°':'좌회전 90°'}`,photo:'route'});
+        else event(start+phase.start,phase.reversing?'reverse_start':'drive_start',{robot,from,to,job,text:`M${robot+1} · ${phase.parking?'대기장소 전진 주차':phase.reversing?`${NAME[from]} 10cm 후진 · 로컬 cmd_vel 출차`:'전방 정렬 완료 · 직선 주행'}`,photo:phase.parking?'waiting':'route'});
       }
-      event(end,'arrive',{robot,from,to,job,text:`버거 ${robot+1} · ${NAME[to]} ${to==='waiting'?'전진 주차 완료':'도착'} · 후방 감지선 도달·정지`,photo:to==='waiting'?'waiting':to==='home'?'home':to==='assembly'?'process':'warehouse'});
+      event(end,'arrive',{robot,from,to,job,text:`M${robot+1} · ${NAME[to]} ${to==='waiting'?'전진 주차 완료':'도착'} · 후방 감지선 도달·정지`,photo:to==='waiting'?'waiting':to==='home'?'home':to==='assembly'?'process':'warehouse'});
       return end;
     }
     event(0,'order',{quantity,text:`Host 주문 접수 · A제품 ${quantity}개 / 두 카운트 ${quantity}로 설정`,photo:'route'});
@@ -60,7 +60,7 @@
       const loadStart=move(robot,i===0?'home':'waiting','warehouse',warehouseStart,i===0?4:3,i);
       const loaded=loadStart+3*config.process.loadPartSeconds;
       task('arm1','load',loadStart,loaded,{robot,job:i});
-      event(loadStart,'load_start',{robot,job:i,text:`로봇팔 1 · 버거 ${robot+1}에 부품 3개 적재 시작`,photo:'loading'});
+      event(loadStart,'load_start',{robot,job:i,text:`로봇팔 1 · M${robot+1}에 부품 3개 적재 시작`,photo:'loading'});
       for(let n=1;n<=3;n++)event(loadStart+n*config.process.loadPartSeconds,'part',{robot,job:i,part:n,text:`제품 #${i+1} · 부품 ${n}/3 적재`,photo:'loading'});
       const dispatch=Math.max(loaded,prior?prior.palletEnd:0,prior?prior.waitEnd:0);
       task(robot,'gate',loaded,dispatch,{job:i});
@@ -94,7 +94,7 @@
     }
     const last=jobs[quantity-1];
     const duration=Math.max(...tails,last.palletEnd);
-    event(duration,'complete',{text:`주문 완료 · A제품 ${quantity}개 적재 / 버거 1·2 초기위치 확인`,photo:'pallet'});
+    event(duration,'complete',{text:`주문 완료 · A제품 ${quantity}개 적재 / M1·M2 초기위치 확인`,photo:'pallet'});
     events.sort((a,b)=>a.time-b.time||a.serial-b.serial);
     return {quantity,tasks,events,jobs,duration,config};
   }
@@ -273,7 +273,7 @@ function stagesFor(quantity,config=Settings.defaults){
     for(const e of stage.events.filter(e=>e.kind==='dispatch')){
       const job=plan.jobs[e.job],prev=plan.jobs[e.job-1];
       const gates=[['부품 3개 적재',job.loaded,'part × 3'],...(prev?[
-        ['앞 제품 파렛트 적재',prev.palletEnd,'pallet_end'],['앞 버거 대기장소 도착',prev.waitEnd,'arrive · waiting']]:[])];
+        ['앞 제품 파렛트 적재',prev.palletEnd,'pallet_end'],['앞 이동 로봇 대기장소 도착',prev.waitEnd,'arrive · waiting']]:[])];
       for(const [label,at,signal] of gates)conditions.push({label:`제품 #${job.id+1} 출발 조건 · ${label}`,signal,done:time+1e-7>=at});
     }
     return conditions;

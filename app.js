@@ -5,12 +5,12 @@ const photos={
  'full-map':{title:'전체 맵 · 현장 배치',detail:'왼쪽 아래 초기위치, 중앙 위 자재창고, 오른쪽 아래 제작공정. 중앙 아래 테이프 박스가 교대 대기장소입니다.'},
  route:{title:'운반경로 및 대기위치',detail:'자재창고와 제작공정 사이의 운반 경로, 교대를 위한 대기장소입니다.'},
  warehouse:{title:'자재창고',detail:'로봇팔 1이 A제품 한 세트에 필요한 부품 3개를 준비하는 공간입니다.'},
- loading:{title:'버거 1 부품 적재',detail:'로봇팔 1이 버거 상판에 부품 3개를 싣습니다. 버거 2도 같은 적재 순서를 사용합니다.'},
- assembly:{title:'로봇팔 2 · 티칭 조립',detail:'버거가 도착하고 A지그 위치가 준비되면 티칭 동작으로 제품을 조립합니다.'},
+ loading:{title:'M1 부품 적재',detail:'로봇팔 1이 이동 로봇 상판에 부품 3개를 싣습니다. M2도 같은 적재 순서를 사용합니다.'},
+ assembly:{title:'로봇팔 2 · 티칭 조립',detail:'이동 로봇이 도착하고 A지그 위치가 준비되면 티칭 동작으로 제품을 조립합니다.'},
  process:{title:'제작공정 · 리니어 모터',detail:'조립 전에는 A지그 위치로, 조립 후에는 초기위치로 이동합니다.'},
  pallet:{title:'로봇팔 3 · 완제품 적재',detail:'완제품을 파렛트로 옮긴 뒤 성공을 확인하면 Host의 완제품 잔여 카운트가 줄어듭니다.'},
- waiting:{title:'버거 대기장소',detail:'교차 통로에서 대기장소를 바라보도록 정렬한 뒤 전진 주차합니다. ArUco 마커 없이 후방 IR 센서가 검은 감지선을 감지하면 정지합니다. 출차할 때는 10cm 후진·정지 후 180° 회전해 전진 주행합니다.'},
- home:{title:'버거 초기위치',detail:'두 버거는 왼쪽 벽의 마커를 바라보고 주차합니다. 로컬 cmd_vel로 10cm 후진·정지 후 180° 회전하고 Nav2 전진 주행을 시작합니다. 복귀 시에는 전진 진입 후 후방 센서가 감지선에 닿는 위치에서 멈춥니다.'}
+ waiting:{title:'이동 로봇 대기장소',detail:'교차 통로에서 대기장소를 바라보도록 정렬한 뒤 전진 주차합니다. ArUco 마커 없이 후방 IR 센서가 검은 감지선을 감지하면 정지합니다. 출차할 때는 10cm 후진·정지 후 180° 회전해 전진 주행합니다.'},
+ home:{title:'이동 로봇 초기위치',detail:'두 이동 로봇은 왼쪽 벽의 마커를 바라보고 주차합니다. 로컬 cmd_vel로 10cm 후진·정지 후 180° 회전하고 Nav2 전진 주행을 시작합니다. 복귀 시에는 전진 진입 후 후방 센서가 감지선에 닿는 위치에서 멈춥니다.'}
 };
 let plan=null,time=0,playing=false,following=true,currentPhoto='full-map',lastEventKey='',lastFrame=0;
 let manualMode=false,manualTarget=null,stages=[],stepBusy=false;
@@ -43,7 +43,7 @@ Object.entries(RobotSimulation.WAYPOINTS).forEach(([id,point])=>{
  marker.setAttribute('data-waypoint-id',id);
  marker.setAttribute('transform',`translate(${point.join(' ')})`);
  const title=document.createElementNS(svgNS,'title');
- title.textContent=`WP${id} · ${({1:'버거 1 초기위치 합류',2:'자재창고 통로',3:'제작공정 합류',4:'버거 2 초기위치 합류'})[id]} · 공통 경유·회전 지점`;
+ title.textContent=`WP${id} · ${({1:'M1 초기위치 합류',2:'자재창고 통로',3:'제작공정 합류',4:'M2 초기위치 합류'})[id]} · 공통 경유·회전 지점`;
  const dot=document.createElementNS(svgNS,'circle');
  dot.setAttribute('r','10');
  const label=document.createElementNS(svgNS,'text');
@@ -64,7 +64,7 @@ function renderNavigation(s){
  const task=plan?.tasks.filter(t=>t.type==='move'&&t.actor===navigationRobot&&t.start<=time).sort((a,b)=>b.start-a.start)[0];
  const list=$('navigation-steps');
  if(!task){
-  $('navigation-summary').textContent=`버거 ${navigationRobot+1} · 초기위치 대기`;
+  $('navigation-summary').textContent=`M${navigationRobot+1} · 초기위치 대기`;
   if(list.dataset.items!=='idle'){list.replaceChildren();list.dataset.items='idle';}
   return;
  }
@@ -91,11 +91,11 @@ function quantityPolicy(){
 function validateQuantity(){const n=Number($('quantity').value),p=quantityPolicy();if(!Number.isInteger(n)||n<p.quantity_min||n>p.quantity_max)throw Error(`주문 수량을 ${p.quantity_min}~${p.quantity_max} 사이의 정수로 입력해 주세요.`);return n;}
 function setPhoto(key){if(currentPhoto!==key||!$('scene-image').getAttribute('src')){$('scene-image').src=photoPath(key);currentPhoto=key;}$('scene-image').alt=photos[key].title;}
 function openPhoto(key){$('dialog-image').src=photoPath(key);$('dialog-image').alt=photos[key].title;$('dialog-title').textContent=photos[key].title;$('dialog-description').textContent=photos[key].detail;$('photo-dialog').showModal();}
-function begin(run=true){manualMode=false;manualTarget=null;if(HostBridge.enabled){try{HostBridge.start(validateQuantity());}catch(e){$('form-error').textContent=e.message;}return;}try{plan=RobotSimulation.makePlan(validateQuantity());stages=RobotSimulation.stagesFor(plan.quantity,plan.config);time=0;playing=run;following=true;lastEventKey='';$('form-error').textContent='';render();}catch(e){$('form-error').textContent=e.message;}}
-function reset(){if(HostBridge.enabled)return;navigationPinned=false;navigationRobot=0;plan=null;manualMode=false;manualTarget=null;stages=[];time=0;playing=false;following=true;lastEventKey='';setPhoto('full-map');render();}
-function step(direction){if(HostBridge.enabled)return;manualMode=false;manualTarget=null;if(!plan){begin(false);return;}playing=false;const times=[...new Set(plan.events.map(e=>e.time))];time=direction>0?(times.find(t=>t>time+0.001)??plan.duration):([...times].reverse().find(t=>t<time-0.001)??0);render();}
-function togglePlay(){if(HostBridge.enabled)return;if(manualMode){if(playing){playing=false;render();}else runStage();return;}if(!plan){begin();return;}if(time>=plan.duration){time=0;lastEventKey='';}playing=!playing;render();}
-async function runStage(){
+function begin(run=true){if(window.LiveMap?.enabled)return;manualMode=false;manualTarget=null;if(HostBridge.enabled){try{HostBridge.start(validateQuantity());}catch(e){$('form-error').textContent=e.message;}return;}try{plan=RobotSimulation.makePlan(validateQuantity());stages=RobotSimulation.stagesFor(plan.quantity,plan.config);time=0;playing=run;following=true;lastEventKey='';$('form-error').textContent='';render();}catch(e){$('form-error').textContent=e.message;}}
+function reset(){if(window.LiveMap?.enabled)return;if(HostBridge.enabled)return;navigationPinned=false;navigationRobot=0;plan=null;manualMode=false;manualTarget=null;stages=[];time=0;playing=false;following=true;lastEventKey='';setPhoto('full-map');render();}
+function step(direction){if(window.LiveMap?.enabled)return;if(HostBridge.enabled)return;manualMode=false;manualTarget=null;if(!plan){begin(false);return;}playing=false;const times=[...new Set(plan.events.map(e=>e.time))];time=direction>0?(times.find(t=>t>time+0.001)??plan.duration):([...times].reverse().find(t=>t<time-0.001)??0);render();}
+function togglePlay(){if(window.LiveMap?.enabled)return;if(HostBridge.enabled)return;if(manualMode){if(playing){playing=false;render();}else runStage();return;}if(!plan){begin();return;}if(time>=plan.duration){time=0;lastEventKey='';}playing=!playing;render();}
+async function runStage(){if(window.LiveMap?.enabled)return;
  if(stepBusy||playing)return;
  if(HostBridge.enabled){
   stepBusy=true;render();
@@ -127,21 +127,21 @@ Object.entries(photos).forEach(([key,data])=>{const card=document.createElement(
 $('export').onclick=()=>{if(!plan)return;const s=RobotSimulation.snapshot(plan,time);const data={product:'A',ordered:plan.quantity,simulationTime:time,transportRemaining:s.transport,productRemaining:s.remaining,completed:s.completed,events:s.events.map(({time,kind,text,robot,job,phase,controller})=>({time,kind,text,phase,controller,robot:robot==null?null:`burger${robot+1}`,productNumber:job==null?null:job+1}))};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='robot3-simulation-log.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 document.addEventListener('keydown',e=>{if(['INPUT','SELECT','BUTTON','TEXTAREA'].includes(e.target.tagName)||$('photo-dialog').open||$('detail-dialog').open)return;if(e.code==='Space'){e.preventDefault();togglePlay();}if(e.code==='ArrowRight'){e.preventDefault();step(1);}if(e.code==='ArrowLeft'){e.preventDefault();step(-1);}});
 function getScene(s){
- if(s.done)return {key:'pallet',kicker:'ORDER COMPLETE',title:'A제품 주문 완료',detail:`완제품 ${plan.quantity}개가 파렛트에 적재됐고, 버거 1·2가 모두 초기위치로 돌아왔습니다.`};
+ if(s.done)return {key:'pallet',kicker:'ORDER COMPLETE',title:'A제품 주문 완료',detail:`완제품 ${plan.quantity}개가 파렛트에 적재됐고, M1·M2가 모두 초기위치로 돌아왔습니다.`};
  const f=s.focus;
  if(!f)return {key:s.events.at(-1)?.photo||'route',kicker:'WAITING FOR NEXT EVENT',title:'다음 공정을 준비합니다',detail:s.events.at(-1)?.text||'장비가 다음 단계를 기다립니다.'};
  const p=f.job==null?'':`제품 #${f.job+1} · `;
- if(f.type==='move'&&s.robots[f.actor].parking)return {key:'waiting',kicker:'FORWARD PARKING',title:`버거 ${f.actor+1} · 전진 주차`,detail:'대기 박스 안으로 전진하고, 후방 적외선 센서가 검은 감지선을 감지하면 정지합니다. 대기장소에는 ArUco 마커가 없습니다.'};
- if(f.type==='move'&&s.robots[f.actor].reversing)return {key:'route',kicker:'LOCAL UNDOCK · 10 CM',title:`버거 ${f.actor+1} · 도킹 위치 10cm 후진`,detail:'도킹 위치에서 로컬 cmd_vel로 10cm 후진·정지한 뒤 180° 회전합니다. 이후 Nav2 전진 주행으로 전환합니다. 화면의 이동 거리는 개념 표시입니다.'};
- if(f.type==='move'&&s.robots[f.actor].navigation?.steps[s.robots[f.actor].navigation.index]?.code==='ARUCO_DOCK')return {key:f.to==='warehouse'?'warehouse':f.to==='home'?'home':'process',kicker:'ARUCO DOCKING · SIMULATED',title:`버거 ${f.actor+1} · ArUco 정렬·전진`,detail:'Nav2 경유점에 도착했습니다. 전방 카메라로 ArUco 마커를 추종하며 정렬·전진하고, 후방 IR 센서가 감지선을 감지하면 정지한 뒤 Host에 도착 완료를 회신합니다. 화면은 모의 동작입니다.'};
- if(f.type==='move'&&s.robots[f.actor].turning)return {key:'route',kicker:'TURNING IN PLACE',title:`버거 ${f.actor+1} · 제자리 회전`,detail:'이동을 멈추고 다음 주행 방향으로 차체를 돌립니다. 방향 정렬이 끝나면 직선 주행을 시작합니다.'};
- if(f.type==='assemble')return {key:'assembly',kicker:'ASSEMBLY IN PROGRESS',title:`${p}티칭 조립`,detail:'로봇팔 2가 A지그에서 조립합니다. 다음 주문이 있으면 다른 버거가 자재창고에서 부품을 준비합니다.'};
- if(f.type==='load')return {key:'loading',kicker:'LOADING 3 PARTS',title:`버거 ${f.robot+1} · 부품 적재`,detail:`${p}로봇팔 1이 부품 3개를 차례로 싣습니다. 적재가 모두 끝나야 제작공정으로 이동할 수 있습니다.`};
+ if(f.type==='move'&&s.robots[f.actor].parking)return {key:'waiting',kicker:'FORWARD PARKING',title:`M${f.actor+1} · 전진 주차`,detail:'대기 박스 안으로 전진하고, 후방 적외선 센서가 검은 감지선을 감지하면 정지합니다. 대기장소에는 ArUco 마커가 없습니다.'};
+ if(f.type==='move'&&s.robots[f.actor].reversing)return {key:'route',kicker:'LOCAL UNDOCK · 10 CM',title:`M${f.actor+1} · 도킹 위치 10cm 후진`,detail:'도킹 위치에서 로컬 cmd_vel로 10cm 후진·정지한 뒤 180° 회전합니다. 이후 Nav2 전진 주행으로 전환합니다. 화면의 이동 거리는 개념 표시입니다.'};
+ if(f.type==='move'&&s.robots[f.actor].navigation?.steps[s.robots[f.actor].navigation.index]?.code==='ARUCO_DOCK')return {key:f.to==='warehouse'?'warehouse':f.to==='home'?'home':'process',kicker:'ARUCO DOCKING · SIMULATED',title:`M${f.actor+1} · ArUco 정렬·전진`,detail:'Nav2 경유점에 도착했습니다. 전방 카메라로 ArUco 마커를 추종하며 정렬·전진하고, 후방 IR 센서가 감지선을 감지하면 정지한 뒤 Host에 도착 완료를 회신합니다. 화면은 모의 동작입니다.'};
+ if(f.type==='move'&&s.robots[f.actor].turning)return {key:'route',kicker:'TURNING IN PLACE',title:`M${f.actor+1} · 제자리 회전`,detail:'이동을 멈추고 다음 주행 방향으로 차체를 돌립니다. 방향 정렬이 끝나면 직선 주행을 시작합니다.'};
+ if(f.type==='assemble')return {key:'assembly',kicker:'ASSEMBLY IN PROGRESS',title:`${p}티칭 조립`,detail:'로봇팔 2가 A지그에서 조립합니다. 다음 주문이 있으면 다른 이동 로봇이 자재창고에서 부품을 준비합니다.'};
+ if(f.type==='load')return {key:'loading',kicker:'LOADING 3 PARTS',title:`M${f.robot+1} · 부품 적재`,detail:`${p}로봇팔 1이 부품 3개를 차례로 싣습니다. 적재가 모두 끝나야 제작공정으로 이동할 수 있습니다.`};
  if(f.type==='pallet')return {key:'pallet',kicker:'PALLET TRANSFER',title:`${p}완제품 이송`,detail:'로봇팔 3이 완제품을 파렛트에 놓습니다. 적재 성공을 확인한 시점에 완제품 잔여가 1 감소합니다.'};
  if(f.type==='prepare'||f.type==='reset')return {key:'process',kicker:'LINEAR MOTOR',title:f.type==='prepare'?'A지그 위치 준비':'리니어 모터 복귀',detail:f.type==='prepare'?'다음 조립에 사용할 A지그를 작업 위치로 이동합니다.':'조립이 끝나 리니어 모터를 초기위치로 되돌립니다.'};
- if(f.type==='gate')return {key:'waiting',kicker:'INTERLOCK WAIT',title:'제작공정 진입 대기',detail:'부품 적재 완료. 앞 제품의 파렛트 적재와 앞 버거의 대기장소 도착을 기다립니다.'};
+ if(f.type==='gate')return {key:'waiting',kicker:'INTERLOCK WAIT',title:'제작공정 진입 대기',detail:'부품 적재 완료. 앞 제품의 파렛트 적재와 앞 이동 로봇의 대기장소 도착을 기다립니다.'};
  const names={home:'초기위치 복귀',waiting:'대기장소 이동',warehouse:'자재창고 이동',assembly:'제작공정 이동'};
- return {key:f.to==='home'?'home':f.to==='waiting'?'waiting':f.to==='warehouse'?'warehouse':'route',kicker:`BURGER ${f.actor+1} · MOVING`,title:`버거 ${f.actor+1} · ${names[f.to]}`,detail:f.to==='assembly'?'Host가 운송 시작을 확인해 운송 잔여를 1 감소시켰습니다. 조립 위치로 이동 중입니다.':f.to==='home'?(f.from==='waiting'?'마지막 운송 버거의 제작공정 도킹이 끝나 통로가 비었습니다. 대기장소에서 초기위치로 복귀합니다.':'조립 작업을 마쳐 초기위치로 복귀합니다. 진행 중인 완제품 적재는 계속됩니다.'):f.to==='waiting'?'교차 통로까지 이동한 뒤 대기장소를 바라보도록 정렬하고 전진 주차합니다.':'자재창고에 도착하면 로봇팔 1이 A제품 부품 3개를 적재합니다.'};
+ return {key:f.to==='home'?'home':f.to==='waiting'?'waiting':f.to==='warehouse'?'warehouse':'route',kicker:`M${f.actor+1} · MOVING`,title:`M${f.actor+1} · ${names[f.to]}`,detail:f.to==='assembly'?'Host가 운송 시작을 확인해 운송 잔여를 1 감소시켰습니다. 조립 위치로 이동 중입니다.':f.to==='home'?(f.from==='waiting'?'마지막 운송 이동 로봇의 제작공정 도킹이 끝나 통로가 비었습니다. 대기장소에서 초기위치로 복귀합니다.':'조립 작업을 마쳐 초기위치로 복귀합니다. 진행 중인 완제품 적재는 계속됩니다.'):f.to==='waiting'?'교차 통로까지 이동한 뒤 대기장소를 바라보도록 정렬하고 전진 주차합니다.':'자재창고에 도착하면 로봇팔 1이 A제품 부품 3개를 적재합니다.'};
 }
 function renderCurrentStage(s){
  const hs=HostBridge.enabled?HostBridge.state:null;
@@ -153,7 +153,7 @@ function renderCurrentStage(s){
  let label='함께 진행 중인 작업';
  let items=plan?s.active.filter(t=>t.type!=='gate').map(t=>{
   const product=t.job==null?'':` · 제품 #${t.job+1}`;
-  if(t.type==='move')return `버거 ${t.actor+1} → ${names[t.to]} · ${s.robots[t.actor].turning?'제자리 회전':s.robots[t.actor].reversing?'후진':'전진'}`;
+  if(t.type==='move')return `M${t.actor+1} → ${names[t.to]} · ${s.robots[t.actor].turning?'제자리 회전':s.robots[t.actor].reversing?'후진':'전진'}`;
   return ({load:'로봇팔 1 · 부품 적재',assemble:'로봇팔 2 · 조립',pallet:'로봇팔 3 · 파렛트 적재',prepare:'리니어 · A지그 준비',reset:'리니어 · 원점 복귀'}[t.type]||t.type)+product;
  }):[];
  if(HostBridge.enabled){
@@ -170,7 +170,7 @@ function renderCurrentStage(s){
  }
  if(manualMode&&!playing&&plan&&!s.done&&time>=manualTarget){status='단계 완료 · 다음 실행 대기';title='다음 단계 실행 대기';detail='왼쪽 완료 조건을 확인한 뒤 단계별 실행 버튼을 누르세요.';label='단계 실행 대기';items=['다음 지시를 기다립니다.'];}
  const number=HostBridge.enabled?(hs?.quantity?`호스트 단계 ${hs.command?.seq??hs.acked_seq} / ${hs.stage_count??'—'}`:'호스트 통신 모드'):manualMode?'단계별 시뮬레이션':'자동 시뮬레이션';
- if(!items.length){label='장비 상태';items=[s.done?'버거 1·2 복귀 및 파렛트 적재 완료':!plan?'버거 1·2 초기위치 대기':'다음 작업 준비'];}
+ if(!items.length){label='장비 상태';items=[s.done?'M1·M2 복귀 및 파렛트 적재 완료':!plan?'M1·M2 초기위치 대기':'다음 작업 준비'];}
  set('stage-status',status);set('stage-number',number);set('stage-title',title);set('stage-detail',detail);$('stage-detail').title=detail;set('stage-work-label',label);
  const list=$('stage-work-list'),key=JSON.stringify(items);
  if(list.dataset.items!==key){list.replaceChildren(...items.map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));list.dataset.items=key;}
@@ -201,6 +201,7 @@ function renderConditions(){
  $('step-order').textContent=plan&&!RobotSimulation.snapshot(plan,time).done?'다음 단계 실행':'단계별 실행';
 }
 function render(){
+ if(window.LiveMap?.enabled){LiveMap.render();return;}
  const s=plan?RobotSimulation.snapshot(plan,time):{...RobotSimulation.snapshot(idlePlan,0),events:[],active:[],robots:[0,1].map(id=>({id,position:RobotSimulation.POINTS['home'+(id+1)],parts:0,heading:RobotSimulation.DOCK_HEADINGS.home,status:'초기위치 대기'})),linear:0,arms:['대기','대기','대기'],done:false};
  renderCurrentStage(s);renderConditions();renderNavigation(s);
  $('total').textContent=plan?plan.quantity:'—';$('transport').textContent=plan?s.transport:'—';$('remaining').textContent=plan?s.remaining:'—';$('completed').textContent=plan?s.completed:0;
@@ -259,6 +260,7 @@ function applyHostState(state){
  render();
 }
 function frame(now){
+ if(window.LiveMap?.enabled){LiveMap.render();requestAnimationFrame(frame);return;}
  if(lastFrame&&playing&&plan){
   const limit=HostBridge.enabled?(HostBridge.state?.command?.target_time??time):manualMode?(manualTarget??time):plan.duration;
   time=Math.min(limit,time+Math.min((now-lastFrame)/1000,.2));
@@ -268,7 +270,9 @@ function frame(now){
  lastFrame=now;requestAnimationFrame(frame);
 }
 {const p=quantityPolicy();$('quantity').min=p.quantity_min;$('quantity').max=p.quantity_max;$('quantity').value=p.quantity_default;}
-render();HostBridge.init(applyHostState);requestAnimationFrame(frame);
+if(window.LiveMap?.enabled)LiveMap.init();
+else {render();HostBridge.init(applyHostState);}
+requestAnimationFrame(frame);
 
 // Preserve the teammate telemetry contract: quantity/product strings, playing boolean.
-window.RosTelemetry?.init(()=>({quantity:$('quantity').value,playing,product:$('product').value}));
+if(!window.LiveMap?.enabled)window.RosTelemetry?.init(()=>({quantity:$('quantity').value,playing,product:$('product').value}));

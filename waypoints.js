@@ -10,7 +10,7 @@
     return node;
   };
   const show = (data, source) => {
-    if (data.robot !== 'burger1' || data.frame !== 'map' || !Array.isArray(data.waypoints) || !data.waypoints.length || data.waypoints.length > 50) throw new Error('버거 1 map 좌표 JSON 형식이 아닙니다.');
+    if (data.robot !== 'burger1' || data.frame !== 'map' || !Array.isArray(data.waypoints) || !data.waypoints.length || data.waypoints.length > 50) throw new Error('M1 map 좌표 JSON 형식이 아닙니다.');
     const points = data.waypoints;
     if (points.some(p => !Number.isInteger(p.number) || ![p.x,p.y,p.yaw].every(Number.isFinite) || !['forward','reverse'].includes(p.mode))) throw new Error('번호, x, y, yaw, mode 값을 확인하세요.');
     const xValues = points.map(p => p.x), yValues = points.map(p => p.y);
@@ -40,7 +40,7 @@
       row.append(number,top,values); list.append(row);
     });
     document.getElementById('waypoint-count').textContent=`${points.length}개`;
-    message.textContent=source === 'bundled' ? `Confluence 버거 1 좌표 ${points.length}개를 표시합니다. 도면과 yaw 방향을 함께 확인하세요.` : `${points.length}개 웨이포인트를 로컬 파일에서 불러왔습니다. 이 화면에서만 표시됩니다.`;
+    message.textContent=source === 'bundled' ? `Confluence M1 좌표 ${points.length}개를 표시합니다. 도면과 yaw 방향을 함께 확인하세요.` : `${points.length}개 웨이포인트를 로컬 파일에서 불러왔습니다. 이 화면에서만 표시됩니다.`;
     message.classList.remove('error');
   };
   document.getElementById('waypoint-file').addEventListener('change', async event => {
@@ -53,7 +53,7 @@
   const names = {home:'초기위치',warehouse:'자재창고',assembly:'제작공정',waiting:'대기장소'};
   Promise.all([1,2].map(async robot => {
     const response=await fetch(`routes-burger${robot}.json`, {cache:'no-store'});
-    if (!response.ok) throw new Error(`버거 ${robot} 경유 순서를 불러오지 못했습니다.`);
+    if (!response.ok) throw new Error(`M${robot} 경유 순서를 불러오지 못했습니다.`);
     const data=await response.json();
     if (data.robot!==`burger${robot}` || !Array.isArray(data.legs)) throw new Error('경유 순서 형식이 잘못되었습니다.');
     return {robot,data};
@@ -61,7 +61,7 @@
     for(const {robot,data} of groups){
       data.legs.forEach(leg => {
         const row=document.createElement('div'); row.className='route-row';
-        const title=document.createElement('strong'); title.textContent=`버거 ${robot} · ${names[leg.from]} → ${names[leg.to]}`;
+        const title=document.createElement('strong'); title.textContent=`M${robot} · ${names[leg.from]} → ${names[leg.to]}`;
         const waypoints=document.createElement('code'); waypoints.textContent=leg.via.map(n => `WP${n}`).join(' → ');
         row.append(title,waypoints); routeList.append(row);
       });
