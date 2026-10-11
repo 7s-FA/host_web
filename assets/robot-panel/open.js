@@ -1,0 +1,1 @@
+(()=>{const button=document.getElementById('open-robot-panel'),dialog=document.getElementById('robot-panel-dialog'),frame=dialog.querySelector('iframe');button.onclick=()=>{frame.src='assets/robot-panel/index.html';dialog.showModal()};dialog.querySelector('button').onclick=()=>dialog.close();dialog.addEventListener('close',()=>frame.removeAttribute('src'));})();

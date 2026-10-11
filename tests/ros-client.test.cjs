@@ -37,6 +37,7 @@ f.timers[0].fn();assert.equal(f.messages.length,1);
 f.elements.get('ros-connect').onclick();f.instances[1].emit('connection');
 f.instances[0].emit('close');assert.equal(api.online,true); // stale connection cannot stop the new one.
 f.timers[0].fn();assert.equal(f.messages.length,2);assert.equal(f.messages[1].quantity,'3');
+f.timers[0].fn();assert.equal(f.messages.length,2); // 같은 값은 heartbeat 간격 전에는 다시 보내지 않음
 f.elements.get('ros-connect').onclick();assert.equal(api.online,false);
 f.timers[0].fn();assert.equal(f.messages.length,2);
 api.connect();f.instances[2].emit('error');assert.equal(api.online,false);

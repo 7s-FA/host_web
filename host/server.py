@@ -155,13 +155,18 @@ class Host:
         return self.state()
 
 class Handler(BaseHTTPRequestHandler):
-    def reply(self, code, data, mime='application/json'):
+    def reply(self, code, data, mime='application/json', etag=None):
         if not isinstance(data, bytes):
             data = json.dumps(data, ensure_ascii=False).encode()
         self.send_response(code)
         self.send_header('Content-Type', mime)
         self.send_header('Content-Length', str(len(data)))
-        self.send_header('Cache-Control', 'no-store')
+        if etag:
+            # 정적 파일: 매번 서버에 확인하되 바뀌지 않았으면 304 로 본문을 다시 보내지 않는다.
+            self.send_header('Cache-Control', 'no-cache')
+            self.send_header('ETag', etag)
+        else:
+            self.send_header('Cache-Control', 'no-store')
         self.send_header('X-Content-Type-Options', 'nosniff')
         self.end_headers()
         self.wfile.write(data)
@@ -195,7 +200,11 @@ class Handler(BaseHTTPRequestHandler):
         target = (ROOT / name).resolve()
         if not allowed or not target.is_relative_to(ROOT) or not target.is_file():
             return self.reply(404, {'error': '파일 없음'})
-        return self.reply(200, target.read_bytes(), mimetypes.guess_type(name)[0] or 'application/octet-stream')
+        stat = target.stat()
+        etag = f'"{stat.st_mtime_ns:x}-{stat.st_size:x}"'
+        if self.headers.get('If-None-Match') == etag:
+            return self.reply(304, b'', etag=etag)
+        return self.reply(200, target.read_bytes(), mimetypes.guess_type(name)[0] or 'application/octet-stream', etag=etag)
 
     def do_POST(self):
         expected = 'http://' + self.headers.get('Host', '')

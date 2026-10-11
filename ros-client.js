@@ -1,9 +1,10 @@
 /* Optional ROS telemetry. Independent of the HTTP Host command/ACK bridge. */
 (function(root){
  'use strict';
- let ros=null,publisher=null,readState=null,initialized=false,allowed=false;
+ let ros=null,publisher=null,readState=null,initialized=false,allowed=false,lastPayload=null,lastSentAt=0;
  const cfg=root.ROS_BRIDGE_CONFIG;
  const api={online:false,connect,disconnect,send};
+ const heartbeatMs=()=>Number.isInteger(cfg?.heartbeatMs)&&cfg.heartbeatMs>=cfg.publishIntervalMs?cfg.heartbeatMs:1000;
  root.RosTelemetry=api;
  const el=id=>document.getElementById(id);
  function status(message){
@@ -31,7 +32,7 @@
    publisher.callForSubscribeAndAdvertise=message=>current.callOnConnection(message);
    current.on('connection',()=>{
     if(ros!==current)return;
-    api.online=true;status(`ROS 연결됨 · ${cfg.topic} · ${cfg.publishIntervalMs}ms 간격 상태 송신`);
+    api.online=true;lastPayload=null;status(`ROS 연결됨 · ${cfg.topic} · 변경 시 즉시, 평상시 ${heartbeatMs()}ms 간격 상태 송신`);
    });
    current.on('error',()=>{
     if(ros!==current)return;
@@ -66,9 +67,14 @@
    if(!['ws:','wss:'].includes(url.protocol)||!cfg.topic?.startsWith('/')||!cfg.messageType||!Number.isInteger(cfg.publishIntervalMs)||cfg.publishIntervalMs<100||cfg.publishIntervalMs>60000)throw Error();
   }catch(_){status('ROS 설정 오류 · ros-config.js를 확인하세요.');return;}
   allowed=true;
+  // publishIntervalMs 마다 화면 상태를 읽되, 값이 바뀌었거나 heartbeat 간격이 지났을 때만 보낸다.
   setInterval(()=>{
    if(!api.online)return;
-   try{send(readState());}catch(_){status('ROS 상태 읽기 실패');}
+   try{
+    const payload=JSON.stringify(readState()),now=Date.now();
+    if(payload===lastPayload&&now-lastSentAt<heartbeatMs())return;
+    if(send(payload)){lastPayload=payload;lastSentAt=now;}
+   }catch(_){status('ROS 상태 읽기 실패');}
   },cfg.publishIntervalMs);
   connect();
  };
