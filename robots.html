@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#17242d"><title>Robot3 · 로봇 제어</title><link rel="stylesheet" href="assets/robot-panel/panel.css"></head>
+<body>
+<header><div><small>ROBOT3 · LIVE CONTROL</small><h1>로봇 제어</h1><p>버거 1·2의 실제 상태를 확인하고 목적지를 지시합니다.</p><nav aria-label="페이지"><a href="index.html">공정 시뮬레이션</a><a href="control.html">Host 관제</a><a href="waypoints.html">웨이포인트</a></nav></div><span id="connection" role="status" aria-live="polite">ROS 연결 확인 중</span></header>
+<p class="connection-help" id="connection-help">로봇 상태를 수신하면 이동 버튼이 활성화됩니다. 목적지 버튼은 실제 로봇에 이동을 요청합니다.</p>
+<main id="robots" aria-label="버거별 제어 및 상태"></main>
+<footer>화면을 닫아도 진행 중인 작업은 계속됩니다. 정지는 로봇에 정지 명령을 요청하며, 정지 해제는 이전 이동을 자동 재개하지 않습니다.</footer>
+<script src="ros-config.js"></script><script src="assets/robot-panel/panel.js"></script>
+</body>
+</html>

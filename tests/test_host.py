@@ -113,7 +113,7 @@ class HTTPTest(unittest.TestCase):
             with urllib.request.urlopen(base+'/?host=1') as r:
                 self.assertIn(b'host-client.js',r.read())
                 self.assertEqual(r.headers['Cache-Control'],'no-store')
-            for name in ['host-client.js','engine.js','app.js','assets/full-map.jpg']:
+            for name in ['host-client.js','engine.js','app.js','robots.html','assets/robot-panel/panel.js','assets/robot-panel/panel.css','assets/full-map.jpg']:
                 with urllib.request.urlopen(base+'/'+name) as r:
                     self.assertEqual(r.status,200)
                     self.assertTrue(r.read())
