@@ -14,6 +14,7 @@
     details{background:white;border:1px solid var(--line);border-radius:12px;margin-top:18px;padding:17px 22px}summary{font-size:14px;font-weight:750;cursor:pointer}details[open] summary{margin-bottom:16px}.extra-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.extra h3{font-size:15px;margin:0 0 8px}.extra p{font-size:12px;color:var(--muted);margin:6px 0 10px}.extra .command{margin-bottom:12px}.extra .command pre{font-size:11px}.bottom{font-size:12px;color:var(--muted);margin:22px 3px 0}.bottom strong{color:var(--ink)}#copy-status{font-size:12px;color:var(--green);min-height:20px;margin:8px 3px 0}.foot-links{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:#526e7e}
     @media(max-width:650px){main{padding:27px 14px 32px}h1{font-size:30px}.topbar{padding:16px 18px}.step{padding:17px}.step h2{font-size:17px}.where{font-size:10px;padding:4px 7px}.columns,.extra-grid{grid-template-columns:1fr;gap:13px}.flow{gap:6px}.flow span{padding:4px 8px}.step-head{gap:10px}details{padding:16px}.browser-steps{gap:7px}.browser-steps span{padding:7px 10px}}
     .embedded .topbar,.embedded .open-control,.embedded .foot-links,.embedded h1,.embedded .eyebrow{display:none}.embedded main{padding-top:24px}.embedded .intro{margin-bottom:16px}
+    .scope-note{font-size:12px;color:#637884;margin:-10px 0 16px}.guide-nav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}.guide-nav a{font-size:12px;font-weight:700;padding:8px 12px;text-decoration:none;background:white;border:1px solid #ccdbe2;border-radius:7px}.guide-nav a:hover{background:#eaf2f5}.anchor-target{scroll-margin-top:16px}.section-heading{font-size:23px;letter-spacing:-.7px;line-height:1.4;margin:34px 0 8px}.section-note{font-size:12px;color:var(--muted);margin:8px 0 14px}.step h3{font-size:17px;line-height:1.4;margin:0}.columns.equal{grid-template-columns:1fr 1fr}.nested{margin-top:14px;padding:12px 14px;background:#f8fafb}.command+.command{margin-top:10px}.step a:not(.open-control){text-underline-offset:3px}.copy{min-height:28px}.guide-nav a:focus-visible{outline:3px solid #72aace;outline-offset:3px}@media(max-width:650px){.columns.equal{grid-template-columns:1fr}.guide-nav{gap:6px}.guide-nav a{font-size:11px;padding:7px 9px}.section-heading{font-size:21px}.scope-note{font-size:11px;overflow-wrap:anywhere}.step h3{font-size:16px}.step-head{flex-wrap:wrap}.where{margin-left:auto}}
     @media print{body{background:white}.topbar,.copy,.open-control,#copy-status{display:none}main{padding:0;max-width:none}.step{break-inside:avoid}.command{background:#f0f3f4;color:#111}.command pre{padding:12px}details{break-inside:avoid}}
   </style>
 </head>
@@ -22,92 +23,77 @@
   <main>
     <p class="eyebrow">HOST PC · QUICK START</p>
     <h1>실물 테스트 <span>사용방법</span></h1>
-    <p class="intro">전원을 켠 뒤, 아래 순서대로 터미널에서 실행하세요.</p>
-    <div class="flow" aria-label="준비 순서"><span>전원·배치</span><b>→</b><span>M1 준비</span><b>→</b><span>M2 준비</span><b>→</b><span>관제 실행</span><b>→</b><span>1개 수동 시험</span></div>
+    <p class="intro">매일 쓰는 실행·종료 순서입니다. 명령은 관제 PC 터미널에서 실행하세요.</p>
+    <p class="scope-note">이 안내의 <strong>hostamr · hostrun</strong>는 이 관제 PC의 <strong>/home/ryu/final_project</strong>에 설정한 명령입니다.</p>
+    <nav class="guide-nav" aria-label="사용방법 바로가기"><a href="#first-start">처음 실행</a><a href="#servers">서버 켜기·끄기</a></nav>
+    <div class="flow" aria-label="준비 순서"><span>전원·배치</span><b>→</b><span>M1·M2 준비</span><b>→</b><span>관제 실행</span><b>→</b><span>1개 수동 시험</span></div>
 
-    <section class="step">
-      <div class="step-head"><span class="number">01</span><h2>전원과 초기 배치 확인</h2><span class="where">현장</span></div>
-      <p>M1·M2·로봇팔·제어 PC의 전원을 켜고 같은 네트워크에 연결합니다. <strong>M1·M2는 각각 지정 주차 위치와 방향</strong>에 놓고, 자재·지그와 팔의 작업 공간을 준비합니다.</p>
-      <p class="note">아래 <span class="short-code">--parked</span>는 현재 위치를 지정 주차 위치로 설정합니다. 주차 위치가 아니면 사용하지 마세요.</p>
-    </section>
+    <div id="first-start" class="anchor-target">
+      <section class="step">
+        <div class="step-head"><span class="number">01</span><h2>전원과 초기 배치 확인</h2><span class="where">현장</span></div>
+        <p>M1·M2·로봇팔·제어 PC의 전원을 켜고 같은 네트워크에 연결합니다. <strong>M1·M2는 각각 지정 주차 위치와 방향</strong>에 놓고, 자재·지그와 작업 공간을 준비합니다.</p>
+        <p class="note"><span class="short-code">--parked</span>는 현재 위치를 지정 주차 위치로 설정합니다. 다른 위치에 있으면 사용하지 마세요.</p>
+      </section>
 
-    <section class="step">
-      <div class="step-head"><span class="number">02</span><h2>M1 준비</h2><span class="where robot">10.10.142.104</span></div>
-      <div class="columns">
-        <div><span class="command-label">관제 PC의 새 터미널 → M1 접속</span><div class="command"><pre><code>ssh ubuntu@10.10.142.104</code></pre><button class="copy" type="button" aria-label="M1 접속 명령 복사">복사</button></div></div>
-        <div><span class="command-label">접속 성공 후, M1 터미널에서</span><div class="command"><pre><code>python3 ~/AMR/scripts/robot.py --robot M1 host-ready --parked
-python3 ~/AMR/scripts/robot.py --robot M1 status</code></pre><button class="copy" type="button" aria-label="M1 준비 명령 복사">복사</button></div></div>
-      </div>
-      <p class="success">확인: 준비 결과 <strong>success: true</strong> → 상태 <strong>mode: process</strong>, <strong>busy: false</strong></p>
-      <p class="note">M1의 계정은 설치 문서 기준 <strong>ubuntu</strong>로 표기했습니다. SSH 인증이 거절되면 실제 계정과 키를 확인하세요. 접속 실패 상태에서 오른쪽 명령을 관제 PC에 실행하지 마세요.</p>
-    </section>
+      <section class="step">
+        <div class="step-head"><span class="number">02</span><h2>호스트에서 M1·M2 준비</h2><span class="where">관제 PC 터미널</span></div>
+        <div class="command"><pre><code>hostamr --ready --parked</code></pre><button class="copy" type="button" aria-label="두 로봇 준비 명령 복사">복사</button></div>
+        <p><strong>M1 → M2 순서</strong>로 센서·위치·제어 서버를 준비합니다. 전원을 켠 뒤 실물 시험을 준비할 때 사용하세요.</p>
+        <p class="caution">모터 토크를 켜고 정지 잠금을 해제합니다. 목적지 이동은 요청하지 않습니다.</p>
+        <p class="success">두 로봇 모두 준비 결과 <strong>success: true</strong> → 상태 <strong>mode: process</strong>, <strong>busy: false</strong>를 확인하세요.</p>
+        <p class="note">실패하거나 연결이 끊기면 결과를 확인한 뒤 진행하세요. 서버만 켜려면 아래 <a href="#servers">서버 켜기·끄기</a>의 hostamr를 사용합니다.</p>
+      </section>
 
-    <section class="step">
-      <div class="step-head"><span class="number">03</span><h2>M2 준비</h2><span class="where robot">10.10.142.102</span></div>
-      <div class="columns">
-        <div><span class="command-label">관제 PC의 다른 터미널 → M2 접속</span><div class="command"><pre><code>ssh ubuntu@10.10.142.102</code></pre><button class="copy" type="button" aria-label="M2 접속 명령 복사">복사</button></div></div>
-        <div><span class="command-label">접속 성공 후, M2 터미널에서</span><div class="command"><pre><code>python3 ~/AMR/scripts/robot.py --robot M2 host-ready --parked
-python3 ~/AMR/scripts/robot.py --robot M2 status</code></pre><button class="copy" type="button" aria-label="M2 준비 명령 복사">복사</button></div></div>
-      </div>
-      <p class="success">확인: 준비 결과 <strong>success: true</strong> → 상태 <strong>mode: process</strong>, <strong>busy: false</strong></p>
-      <p class="note">M1·M2의 <span class="short-code">host-ready</span>는 센서·위치·모터 토크·정지 상태를 준비하고 정지 잠금을 해제합니다. 목적지 이동은 요청하지 않습니다. 실패하면 오류를 확인한 뒤 진행하세요.</p>
-    </section>
+      <section class="step">
+        <div class="step-head"><span class="number">03</span><h2>관제 실행과 연결 확인</h2><span class="where">관제 PC 터미널</span></div>
+        <div class="command"><pre><code>hostrun</code></pre><button class="copy" type="button" aria-label="관제 실행 명령 복사">복사</button></div>
+        <p><strong>관제가 이미 켜져 있으면 중복 실행하지 않고 화면을 엽니다.</strong> 새로 실행한 터미널은 켜 두세요.</p>
+        <p><strong>http://localhost:8082/control.html</strong>에서 <strong>Host · M1 · M2 · 자재창고(팔1) · 제작공정(팔2·3)</strong> 연결을 확인합니다. 1개 시험도 현재 관제에서는 다섯 장치의 Action 서버 연결이 필요합니다.</p>
+        <p class="note">서비스의 <strong>active / running</strong>과 <strong>웹 관제 연결</strong>은 별개입니다. 연결되지 않으면 주문 시작을 보류하세요.</p>
+        <p class="note">GitHub Pages는 안내·시뮬레이션용입니다. 실제 로봇 제어는 관제 PC의 위 로컬 주소에서 실행합니다.</p>
+        <a class="open-control" href="http://localhost:8082/control.html">이 PC의 관제 화면 열기 ↗</a>
+      </section>
 
-    <section class="step">
-      <div class="step-head"><span class="number">04</span><h2>관제 실행</h2><span class="where">이 관제 PC</span></div>
-      <div class="command"><pre><code>source ~/.bashrc
-hostrun</code></pre><button class="copy" type="button" aria-label="관제 실행 명령 복사">복사</button></div>
-      <p class="note">로봇에 SSH로 접속한 터미널이 아닌 <strong>관제 PC의 새 터미널</strong>에서 실행하고 켜 두세요. 관제가 이미 실행 중이면 중복 실행하지 않고 화면을 열면 됩니다.</p>
-      <p>관제 PC에서 <strong>http://localhost:8082/control.html</strong>을 열고 <strong>Host · M1 · M2 · 자재창고(팔1) · 제작공정(팔2·3)</strong>의 연결을 확인합니다. 팔이 연결되지 않으면 아래 ‘팔 서버 연결이 안 될 때’를 확인하세요.</p>
-      <p class="note">GitHub Pages에서는 안내와 시뮬레이션을 볼 수 있습니다. 실제 로봇 제어는 관제 PC의 위 로컬 주소에서 실행합니다.</p>
-      <a class="open-control" href="http://localhost:8082/control.html">이 PC의 관제 화면 열기 ↗</a>
-    </section>
+      <section class="step">
+        <div class="step-head"><span class="number">04</span><h2>첫 시험은 1개씩, 수동으로</h2><span class="where">웹 관제 화면</span></div>
+        <div class="browser-steps"><span>실제 자재에 맞는 A/B 선택</span><span>수량 <strong>1개</strong></span><span class="off">자동 진행 체크 해제</span><span>주문 시작</span></div>
+        <p class="caution"><strong>‘주문 시작’을 누르면 M1의 창고 이동이 바로 시작됩니다.</strong> 각 동작이 끝나고 현장 상태를 확인한 뒤 ‘다음 단계’를 누르세요.</p>
+        <p>M1 창고 도킹 → 팔1 자재 적재 → M1 제작공정 도킹 → 팔2 조립 → 팔3 완제품 적재 → M1 복귀</p>
+        <p class="success">완료 기준: <strong>6 / 6 단계</strong>, <strong>적재 완료 1</strong>, <strong>주문 완료</strong>. 연결 표시만으로 물리적인 준비 완료를 판단하지 않습니다.</p>
+      </section>
+    </div>
 
-    <section class="step">
-      <div class="step-head"><span class="number">05</span><h2>첫 시험은 1개씩, 수동으로</h2><span class="where">웹 관제 화면</span></div>
-      <div class="browser-steps"><span>실제 자재에 맞는 A/B 선택</span><span>수량 <strong>1개</strong></span><span class="off">자동 진행 체크 해제</span><span>주문 시작</span></div>
-      <p class="caution"><strong>‘주문 시작’을 누르면 M1의 창고 이동이 바로 시작됩니다.</strong> 각 동작이 끝나고 현장 상태를 확인한 뒤 ‘다음 단계’를 누르세요.</p>
-      <p>M1 창고 도킹 → 팔1 자재 적재 → M1 제작공정 도킹 → 팔2 조립 → 팔3 완제품 적재 → M1 복귀</p>
-      <p class="success">완료 기준: <strong>6 / 6 단계</strong>, <strong>적재 완료 1</strong>, <strong>주문 완료</strong>. 연결 표시만으로 물리적인 준비 완료를 판단하지 않습니다.</p>
-    </section>
-
-    <details>
-      <summary>팔 서버 연결이 안 될 때</summary>
-      <div class="extra-grid">
-        <div class="extra">
-          <h3>팔1 · 모방학습 제어 PC</h3>
-          <p>팔1에 연결된 PC에서 실행합니다. 관제 화면에 이미 연결되어 있으면 서버를 중복 실행하지 마세요.</p>
-          <div class="command"><pre><code>cd ~/Downloads/so101_imitation
-bash run-arm1-server.sh</code></pre><button class="copy" type="button" aria-label="팔1 서버 명령 복사">복사</button></div>
-          <p><strong>ARM1 READY mode=HARDWARE</strong> 표시를 확인하고 터미널을 유지합니다. 폴더나 모델이 없으면 팔1 PC의 실제 설치 경로를 확인하세요.</p>
+    <section id="servers" class="anchor-target" aria-labelledby="servers-title">
+      <h2 class="section-heading" id="servers-title">서버 켜기·끄기</h2>
+      <p class="section-note">아래 명령은 모두 관제 PC 터미널에서 실행합니다.</p>
+      <div class="step">
+        <div class="step-head"><h3>M1·M2 서버 켜기 / 상태 확인</h3><span class="where">관제 PC</span></div>
+        <div class="columns equal">
+          <div><span class="command-label">두 제어 서버 시작 · 다시 켜기도 같은 명령</span><div class="command"><pre><code>hostamr</code></pre><button class="copy" type="button" aria-label="두 서버 시작 명령 복사">복사</button></div></div>
+          <div><span class="command-label">두 서버 상태 조회</span><div class="command"><pre><code>hostamr --status</code></pre><button class="copy" type="button" aria-label="두 서버 상태 명령 복사">복사</button></div></div>
         </div>
-        <div class="extra">
-          <h3>팔2·3 · 공용 제어 Pi</h3>
-          <span class="command-label">관제 PC 터미널에서 접속</span>
-          <div class="command"><pre><code>ssh ubuntu@10.10.142.113</code></pre><button class="copy" type="button" aria-label="팔2·3 Pi 접속 명령 복사">복사</button></div>
-          <span class="command-label">Pi에 접속한 뒤, 서비스 확인</span>
-          <div class="command"><pre><code>systemctl is-active arm3-linear-controller.service workcell-actions.service</code></pre><button class="copy" type="button" aria-label="팔2·3 서비스 확인 명령 복사">복사</button></div>
-          <p>둘 다 <strong>active</strong>이면 그대로 둡니다. <strong>inactive</strong>인 경우에만 아래 명령으로 시작합니다.</p>
-          <div class="command"><pre><code>sudo systemctl start arm3-linear-controller.service workcell-actions.service</code></pre><button class="copy" type="button" aria-label="팔2·3 서비스 시작 명령 복사">복사</button></div>
-          <p>failed 또는 not-found이면 시작을 반복하지 말고 설치·로그를 확인합니다. 작업 중에는 서비스를 재시작하지 마세요.</p>
+        <p><strong>active / running</strong>이면 실행 중입니다. 이미 실행 중인 서버는 유지하며 재시작하지 않습니다. 서버 시작만으로 센서·모터·초기 위치 준비가 끝나는 것은 아닙니다.</p>
+      </div>
+      <div class="step">
+        <div class="step-head"><h3>M1·M2 서버 끄기</h3><span class="where">관제 PC</span></div>
+        <p class="caution"><strong>주문과 로봇 동작이 모두 끝나고 실제 정지를 확인한 뒤</strong> 실행하세요. 서버 종료는 비상정지가 아닙니다.</p>
+        <div class="columns equal">
+          <div><span class="command-label">M1 제어 서버 종료</span><div class="command"><pre><code>ssh ubuntu@10.10.142.104 'systemctl --user stop m1-action.service'</code></pre><button class="copy" type="button" aria-label="M1 서버 종료 명령 복사">복사</button></div></div>
+          <div><span class="command-label">M2 제어 서버 종료</span><div class="command"><pre><code>ssh ubuntu@10.10.142.102 'systemctl --user stop m2-action.service'</code></pre><button class="copy" type="button" aria-label="M2 서버 종료 명령 복사">복사</button></div></div>
         </div>
+        <p>종료 후 <span class="short-code">hostamr --status</span>에서 <strong>inactive / dead</strong>를 확인합니다. 위 명령은 Action 서버만 종료하며 센서·Nav2 서비스나 로봇 전원을 끄지는 않습니다.</p>
+        <p>다시 켜려면 <span class="short-code">hostamr</span>를 실행하고, 실물 시험 전에 준비 결과와 관제 연결을 다시 확인하세요.</p>
       </div>
-    </details>
-
-    <details>
-      <summary>환경 점검 / 모의 실행 / 연결 문제</summary>
-      <div class="extra">
-        <p>아래 명령은 <strong>관제 PC</strong>에서 실행합니다. 현재 관제를 종료한 상태에서 하나씩 사용하세요.</p>
-        <div class="command"><pre><code>hostcheck</code></pre><button class="copy" type="button" aria-label="환경 점검 명령 복사">복사</button></div>
-        <p>환경·Action 타입·8082/9090 포트를 점검합니다. 관제가 이미 켜져 있으면 포트가 사용 중인 것이 정상입니다.</p>
-        <div class="command"><pre><code>hostmock</code></pre><button class="copy" type="button" aria-label="모의 실행 명령 복사">복사</button></div>
-        <p>실제 장치 대신 가상 장치로 실행합니다. 실물 시험에는 <strong>hostrun</strong>을 사용하세요.</p>
-        <p>장치가 보이지 않으면 같은 네트워크인지, <strong>ROS_DOMAIN_ID=40</strong> / <strong>ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET</strong>인지 확인합니다. ‘서비스 active’와 ‘관제에 연결됨’은 별도로 확인해야 합니다.</p>
+      <div class="step">
+        <div class="step-head"><h3>호스트 웹 관제 끄기 / 다시 켜기</h3><span class="where">hostrun 실행 터미널</span></div>
+        <p>모든 작업이 끝나고 장치가 멈춘 상태에서 <strong>hostrun을 실행한 터미널의 Ctrl+C</strong>를 누릅니다. 웹 관제·ROS 브리지·Host 제어기를 함께 종료합니다.</p>
+        <p>다시 켜려면 관제 PC에서 <span class="short-code">hostrun</span>을 실행합니다. 브라우저 탭만 닫으면 서버는 계속 실행됩니다. M1·M2 원격 서버는 위 종료 명령으로 따로 끕니다.</p>
       </div>
-    </details>
+    </section>
 
-    <p class="bottom"><strong>종료:</strong> 모든 장치의 동작 완료·정지를 확인한 뒤 관제를 실행한 터미널에서 <strong>Ctrl+C</strong>를 누릅니다. ‘단계 후 일시정지’는 현재 동작이 끝난 후 적용되며, 브라우저 닫기·관제 종료는 즉시 정지 명령이 아닙니다. 팔1 서버 종료는 토크를 해제하므로 팔을 지지한 상태에서 종료하세요.</p>
-    <p class="bottom"><strong>정지가 필요하면:</strong> M1·M2는 관제의 장치별 정지 버튼을 사용합니다. 팔은 해당 제어기의 정지를 사용하며, 팔2·3의 정지 명령은 이미 움직이는 리니어까지 멈추지는 않습니다.</p>
+    <p class="bottom"><strong>정지가 필요하면:</strong> ‘단계 후 일시정지’는 현재 동작이 끝난 뒤 적용됩니다. M1·M2는 관제의 장치별 정지 버튼, 팔은 해당 제어기의 정지를 사용합니다. 팔2·3의 정지 명령은 이미 움직이는 리니어까지 멈추지는 않습니다.</p>
+    <p class="bottom">팔1 서버 종료는 토크를 해제하므로 팔을 지지한 상태에서 종료하세요. 브라우저 닫기·서버 종료는 즉시 정지 명령이 아닙니다.</p>
+    <p class="bottom">명령을 찾을 수 없다고 나오면 현재 터미널에서 <span class="short-code">source ~/.bashrc</span>를 한 번 실행하세요.</p>
     <div class="foot-links"><a href="control.html">관제 화면</a><a href="HOST_CONTROL_GUIDE.md">상세 관제 안내</a></div>
     <p id="copy-status" role="status" aria-live="polite"></p>
   </main>
