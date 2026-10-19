@@ -48,6 +48,7 @@ jobs:
       - name: Prepare static website
         run: |
           mkdir -p _site
+          cp usage.html usage-modal.js usage-modal.css _site/
           cp device-connection-client.js device-connection.js device-connection.css _site/
           cp robot-battery-client.js robot-battery.js robot-stop-client.js robot-stop.js live-map-config.js live-map-model.js live-map-client.js live-map.js dashboard.css control.html control.css control.js HOST_CONTROL_GUIDE.md ros-config.js ros-client.js ROS_BRIDGE_GUIDE.md index.html styles.css app.js engine.js host-client.js config.js settings.js downloads.html downloads.css waypoints.html waypoints.css waypoints.js routes-burger1.json routes-burger2.json system-config.json system-policy.js host-test.zip _site/
           if test -f waypoints-burger1.json; then cp waypoints-burger1.json _site/; fi

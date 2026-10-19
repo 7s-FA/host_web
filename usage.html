@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Robot3 · 사용방법</title>
+  <style>
+    :root{color-scheme:light;--ink:#233b49;--muted:#627782;--line:#dce5e9;--green:#267157;--sand:#bf8740}
+    *{box-sizing:border-box}body{margin:0;background:#f3f6f7;color:var(--ink);font:15px/1.7 system-ui,-apple-system,"Noto Sans KR",sans-serif;word-break:keep-all}a{color:inherit}button{font:inherit;cursor:pointer}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #72aace;outline-offset:4px}
+    .topbar{background:#1b2c36;color:#eef4f6;padding:18px max(22px,calc((100% - 1040px)/2));display:flex;justify-content:space-between;gap:18px;align-items:center}.brand{font-weight:800;letter-spacing:2px;text-decoration:none}.brand span{color:#e3b16e}.topbar a:last-child{font-size:13px;text-decoration:none}
+    main{max-width:1040px;margin:auto;padding:40px 22px 48px}.eyebrow{font-size:11px;letter-spacing:2px;font-weight:750;color:var(--muted);margin:0 0 8px}h1{font-size:36px;letter-spacing:-1.5px;margin:0 0 7px;line-height:1.3}h1 span{color:var(--sand)}.intro{color:var(--muted);margin:0 0 23px}.flow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:26px;font-size:12px;font-weight:650}.flow span{background:#e5ecef;padding:5px 10px;border-radius:5px}.flow b{color:#91a2ac;font-weight:400}
+    .step{background:white;border:1px solid var(--line);border-radius:14px;padding:22px;margin:0 0 15px}.step-head{display:flex;align-items:center;gap:13px;margin-bottom:12px}.number{width:35px;height:35px;display:grid;place-items:center;border-radius:9px;background:#eaf1f3;font-size:13px;font-weight:800;flex:none}.step h2{font-size:19px;line-height:1.4;margin:0;letter-spacing:-.5px}.where{font-size:11px;background:#edf4f1;color:var(--green);padding:4px 10px;border-radius:20px;margin-left:auto;font-weight:700;white-space:nowrap}.where.robot{background:#fbf1e4;color:#926023}.step p{margin:7px 0;color:var(--muted);font-size:13px}.step strong{color:var(--ink)}.columns{display:grid;grid-template-columns:1fr 1.45fr;gap:16px}.command-label{display:block;font-size:12px;font-weight:650;margin:0 0 6px;color:#5b707b}.command{position:relative;background:#1c2d37;color:#f3f6f7;border-radius:9px;overflow:hidden;min-width:0}.command pre{margin:0;padding:16px 16px 42px;font:12px/1.9 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}.copy{position:absolute;right:10px;bottom:9px;border:1px solid #52626c;border-radius:5px;padding:2px 9px;color:#e5edf1;background:#30434f;font-size:11px}.copy:hover{background:#3f5564}.note{font-size:12px!important;color:var(--muted);margin-top:10px!important}.success{margin-top:12px!important;background:#edf6f0;padding:9px 12px;border-radius:6px;color:#32644b!important}.caution{background:#fff4e5;padding:10px 13px;border-left:3px solid #d59c4f;border-radius:4px;color:#775c32!important}.short-code{display:inline-block;background:#edf1f3;border-radius:4px;padding:0 5px;font:12px/1.8 ui-monospace,monospace;color:#365366}
+    .browser-steps{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:13px;margin:14px 0}.browser-steps span{padding:9px 12px;background:#eff4f6;border-radius:6px}.browser-steps .off{border:1px solid #ddbc85;background:#fff6e9;font-weight:700}.open-control{display:inline-block;background:var(--ink);color:white;text-decoration:none;padding:10px 18px;border-radius:7px;font-size:13px;font-weight:700;margin-top:10px}
+    details{background:white;border:1px solid var(--line);border-radius:12px;margin-top:18px;padding:17px 22px}summary{font-size:14px;font-weight:750;cursor:pointer}details[open] summary{margin-bottom:16px}.extra-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.extra h3{font-size:15px;margin:0 0 8px}.extra p{font-size:12px;color:var(--muted);margin:6px 0 10px}.extra .command{margin-bottom:12px}.extra .command pre{font-size:11px}.bottom{font-size:12px;color:var(--muted);margin:22px 3px 0}.bottom strong{color:var(--ink)}#copy-status{font-size:12px;color:var(--green);min-height:20px;margin:8px 3px 0}.foot-links{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:#526e7e}
+    @media(max-width:650px){main{padding:27px 14px 32px}h1{font-size:30px}.topbar{padding:16px 18px}.step{padding:17px}.step h2{font-size:17px}.where{font-size:10px;padding:4px 7px}.columns,.extra-grid{grid-template-columns:1fr;gap:13px}.flow{gap:6px}.flow span{padding:4px 8px}.step-head{gap:10px}details{padding:16px}.browser-steps{gap:7px}.browser-steps span{padding:7px 10px}}
+    .embedded .topbar,.embedded .open-control,.embedded .foot-links,.embedded h1,.embedded .eyebrow{display:none}.embedded main{padding-top:24px}.embedded .intro{margin-bottom:16px}
+    @media print{body{background:white}.topbar,.copy,.open-control,#copy-status{display:none}main{padding:0;max-width:none}.step{break-inside:avoid}.command{background:#f0f3f4;color:#111}.command pre{padding:12px}details{break-inside:avoid}}
+  </style>
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="control.html">ROBOT<span>3</span></a><a href="control.html">관제 화면으로 돌아가기 ↗</a></header>
+  <main>
+    <p class="eyebrow">HOST PC · QUICK START</p>
+    <h1>실물 테스트 <span>사용방법</span></h1>
+    <p class="intro">전원을 켠 뒤, 아래 순서대로 터미널에서 실행하세요.</p>
+    <div class="flow" aria-label="준비 순서"><span>전원·배치</span><b>→</b><span>M1 준비</span><b>→</b><span>M2 준비</span><b>→</b><span>관제 실행</span><b>→</b><span>1개 수동 시험</span></div>
+
+    <section class="step">
+      <div class="step-head"><span class="number">01</span><h2>전원과 초기 배치 확인</h2><span class="where">현장</span></div>
+      <p>M1·M2·로봇팔·제어 PC의 전원을 켜고 같은 네트워크에 연결합니다. <strong>M1·M2는 각각 지정 주차 위치와 방향</strong>에 놓고, 자재·지그와 팔의 작업 공간을 준비합니다.</p>
+      <p class="note">아래 <span class="short-code">--parked</span>는 현재 위치를 지정 주차 위치로 설정합니다. 주차 위치가 아니면 사용하지 마세요.</p>
+    </section>
+
+    <section class="step">
+      <div class="step-head"><span class="number">02</span><h2>M1 준비</h2><span class="where robot">10.10.142.104</span></div>
+      <div class="columns">
+        <div><span class="command-label">관제 PC의 새 터미널 → M1 접속</span><div class="command"><pre><code>ssh ubuntu@10.10.142.104</code></pre><button class="copy" type="button" aria-label="M1 접속 명령 복사">복사</button></div></div>
+        <div><span class="command-label">접속 성공 후, M1 터미널에서</span><div class="command"><pre><code>python3 ~/AMR/scripts/robot.py --robot M1 host-ready --parked
+python3 ~/AMR/scripts/robot.py --robot M1 status</code></pre><button class="copy" type="button" aria-label="M1 준비 명령 복사">복사</button></div></div>
+      </div>
+      <p class="success">확인: 준비 결과 <strong>success: true</strong> → 상태 <strong>mode: process</strong>, <strong>busy: false</strong></p>
+      <p class="note">M1의 계정은 설치 문서 기준 <strong>ubuntu</strong>로 표기했습니다. SSH 인증이 거절되면 실제 계정과 키를 확인하세요. 접속 실패 상태에서 오른쪽 명령을 관제 PC에 실행하지 마세요.</p>
+    </section>
+
+    <section class="step">
+      <div class="step-head"><span class="number">03</span><h2>M2 준비</h2><span class="where robot">10.10.142.102</span></div>
+      <div class="columns">
+        <div><span class="command-label">관제 PC의 다른 터미널 → M2 접속</span><div class="command"><pre><code>ssh ubuntu@10.10.142.102</code></pre><button class="copy" type="button" aria-label="M2 접속 명령 복사">복사</button></div></div>
+        <div><span class="command-label">접속 성공 후, M2 터미널에서</span><div class="command"><pre><code>python3 ~/AMR/scripts/robot.py --robot M2 host-ready --parked
+python3 ~/AMR/scripts/robot.py --robot M2 status</code></pre><button class="copy" type="button" aria-label="M2 준비 명령 복사">복사</button></div></div>
+      </div>
+      <p class="success">확인: 준비 결과 <strong>success: true</strong> → 상태 <strong>mode: process</strong>, <strong>busy: false</strong></p>
+      <p class="note">M1·M2의 <span class="short-code">host-ready</span>는 센서·위치·모터 토크·정지 상태를 준비하고 정지 잠금을 해제합니다. 목적지 이동은 요청하지 않습니다. 실패하면 오류를 확인한 뒤 진행하세요.</p>
+    </section>
+
+    <section class="step">
+      <div class="step-head"><span class="number">04</span><h2>관제 실행</h2><span class="where">이 관제 PC</span></div>
+      <div class="command"><pre><code>source ~/.bashrc
+hostrun</code></pre><button class="copy" type="button" aria-label="관제 실행 명령 복사">복사</button></div>
+      <p class="note">로봇에 SSH로 접속한 터미널이 아닌 <strong>관제 PC의 새 터미널</strong>에서 실행하고 켜 두세요. 관제가 이미 실행 중이면 중복 실행하지 않고 화면을 열면 됩니다.</p>
+      <p>관제 PC에서 <strong>http://localhost:8082/control.html</strong>을 열고 <strong>Host · M1 · M2 · 자재창고(팔1) · 제작공정(팔2·3)</strong>의 연결을 확인합니다. 팔이 연결되지 않으면 아래 ‘팔 서버 연결이 안 될 때’를 확인하세요.</p>
+      <p class="note">GitHub Pages에서는 안내와 시뮬레이션을 볼 수 있습니다. 실제 로봇 제어는 관제 PC의 위 로컬 주소에서 실행합니다.</p>
+      <a class="open-control" href="http://localhost:8082/control.html">이 PC의 관제 화면 열기 ↗</a>
+    </section>
+
+    <section class="step">
+      <div class="step-head"><span class="number">05</span><h2>첫 시험은 1개씩, 수동으로</h2><span class="where">웹 관제 화면</span></div>
+      <div class="browser-steps"><span>실제 자재에 맞는 A/B 선택</span><span>수량 <strong>1개</strong></span><span class="off">자동 진행 체크 해제</span><span>주문 시작</span></div>
+      <p class="caution"><strong>‘주문 시작’을 누르면 M1의 창고 이동이 바로 시작됩니다.</strong> 각 동작이 끝나고 현장 상태를 확인한 뒤 ‘다음 단계’를 누르세요.</p>
+      <p>M1 창고 도킹 → 팔1 자재 적재 → M1 제작공정 도킹 → 팔2 조립 → 팔3 완제품 적재 → M1 복귀</p>
+      <p class="success">완료 기준: <strong>6 / 6 단계</strong>, <strong>적재 완료 1</strong>, <strong>주문 완료</strong>. 연결 표시만으로 물리적인 준비 완료를 판단하지 않습니다.</p>
+    </section>
+
+    <details>
+      <summary>팔 서버 연결이 안 될 때</summary>
+      <div class="extra-grid">
+        <div class="extra">
+          <h3>팔1 · 모방학습 제어 PC</h3>
+          <p>팔1에 연결된 PC에서 실행합니다. 관제 화면에 이미 연결되어 있으면 서버를 중복 실행하지 마세요.</p>
+          <div class="command"><pre><code>cd ~/Downloads/so101_imitation
+bash run-arm1-server.sh</code></pre><button class="copy" type="button" aria-label="팔1 서버 명령 복사">복사</button></div>
+          <p><strong>ARM1 READY mode=HARDWARE</strong> 표시를 확인하고 터미널을 유지합니다. 폴더나 모델이 없으면 팔1 PC의 실제 설치 경로를 확인하세요.</p>
+        </div>
+        <div class="extra">
+          <h3>팔2·3 · 공용 제어 Pi</h3>
+          <span class="command-label">관제 PC 터미널에서 접속</span>
+          <div class="command"><pre><code>ssh ubuntu@10.10.142.113</code></pre><button class="copy" type="button" aria-label="팔2·3 Pi 접속 명령 복사">복사</button></div>
+          <span class="command-label">Pi에 접속한 뒤, 서비스 확인</span>
+          <div class="command"><pre><code>systemctl is-active arm3-linear-controller.service workcell-actions.service</code></pre><button class="copy" type="button" aria-label="팔2·3 서비스 확인 명령 복사">복사</button></div>
+          <p>둘 다 <strong>active</strong>이면 그대로 둡니다. <strong>inactive</strong>인 경우에만 아래 명령으로 시작합니다.</p>
+          <div class="command"><pre><code>sudo systemctl start arm3-linear-controller.service workcell-actions.service</code></pre><button class="copy" type="button" aria-label="팔2·3 서비스 시작 명령 복사">복사</button></div>
+          <p>failed 또는 not-found이면 시작을 반복하지 말고 설치·로그를 확인합니다. 작업 중에는 서비스를 재시작하지 마세요.</p>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary>환경 점검 / 모의 실행 / 연결 문제</summary>
+      <div class="extra">
+        <p>아래 명령은 <strong>관제 PC</strong>에서 실행합니다. 현재 관제를 종료한 상태에서 하나씩 사용하세요.</p>
+        <div class="command"><pre><code>hostcheck</code></pre><button class="copy" type="button" aria-label="환경 점검 명령 복사">복사</button></div>
+        <p>환경·Action 타입·8082/9090 포트를 점검합니다. 관제가 이미 켜져 있으면 포트가 사용 중인 것이 정상입니다.</p>
+        <div class="command"><pre><code>hostmock</code></pre><button class="copy" type="button" aria-label="모의 실행 명령 복사">복사</button></div>
+        <p>실제 장치 대신 가상 장치로 실행합니다. 실물 시험에는 <strong>hostrun</strong>을 사용하세요.</p>
+        <p>장치가 보이지 않으면 같은 네트워크인지, <strong>ROS_DOMAIN_ID=40</strong> / <strong>ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET</strong>인지 확인합니다. ‘서비스 active’와 ‘관제에 연결됨’은 별도로 확인해야 합니다.</p>
+      </div>
+    </details>
+
+    <p class="bottom"><strong>종료:</strong> 모든 장치의 동작 완료·정지를 확인한 뒤 관제를 실행한 터미널에서 <strong>Ctrl+C</strong>를 누릅니다. ‘단계 후 일시정지’는 현재 동작이 끝난 후 적용되며, 브라우저 닫기·관제 종료는 즉시 정지 명령이 아닙니다. 팔1 서버 종료는 토크를 해제하므로 팔을 지지한 상태에서 종료하세요.</p>
+    <p class="bottom"><strong>정지가 필요하면:</strong> M1·M2는 관제의 장치별 정지 버튼을 사용합니다. 팔은 해당 제어기의 정지를 사용하며, 팔2·3의 정지 명령은 이미 움직이는 리니어까지 멈추지는 않습니다.</p>
+    <div class="foot-links"><a href="control.html">관제 화면</a><a href="HOST_CONTROL_GUIDE.md">상세 관제 안내</a></div>
+    <p id="copy-status" role="status" aria-live="polite"></p>
+  </main>
+  <script>
+    if (new URLSearchParams(location.search).get('embedded') === '1') document.body.classList.add('embedded');
+    document.querySelectorAll('.copy').forEach(button => {
+      button.addEventListener('click', async () => {
+        const text = button.parentElement.querySelector('code').textContent;
+        try {
+          await navigator.clipboard.writeText(text);
+          button.textContent = '복사됨';
+          document.getElementById('copy-status').textContent = '명령을 복사했습니다. 표시된 대상의 터미널에서 실행하세요.';
+          setTimeout(() => { button.textContent = '복사'; }, 1600);
+        } catch {
+          const selection = window.getSelection(), range = document.createRange();
+          range.selectNodeContents(button.parentElement.querySelector('code'));
+          selection.removeAllRanges(); selection.addRange(range);
+          document.getElementById('copy-status').textContent = '명령을 선택했습니다. Ctrl+C로 복사하세요.';
+        }
+      });
+    });
+  </script>
+</body>
+</html>

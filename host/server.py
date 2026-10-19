@@ -203,6 +203,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(200, script.encode(), 'text/javascript')
         name = path.lstrip('/') or 'index.html'
         allowed = name in {'index.html', 'styles.css', 'dashboard.css', 'app.js', 'engine.js', 'host-client.js', 'ros-config.js', 'ros-client.js','live-map-config.js','live-map-model.js','live-map-client.js','live-map.js', 'robot-stop-client.js', 'robot-stop.js', 'robot-battery-client.js', 'robot-battery.js', 'device-connection-client.js', 'device-connection.js', 'device-connection.css', 'ROS_BRIDGE_GUIDE.md', 'config.js', 'settings.js', 'downloads.html', 'downloads.css', 'waypoints.html', 'waypoints.css', 'waypoints.js', 'waypoints-burger1.json', 'routes-burger1.json', 'routes-burger2.json', 'control.html', 'control.css', 'control.js', 'HOST_CONTROL_GUIDE.md', 'system-config.json'} or (name.startswith('assets/') and '..' not in name)
+        allowed = allowed or name in {'usage.html', 'usage-modal.js', 'usage-modal.css'}
         target = (ROOT / name).resolve()
         if not allowed or not target.is_relative_to(ROOT) or not target.is_file():
             return self.reply(404, {'error': '파일 없음'})

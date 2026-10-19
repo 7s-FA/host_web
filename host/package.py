@@ -10,7 +10,7 @@ with ZipFile(root / 'host-test.zip', 'w', ZIP_DEFLATED) as z:
             z.write(p, prefix + p.relative_to(root / 'team-template').as_posix())
     z.write(root / 'system-config.json', prefix + 'config/system-config.json')
     z.write(root / 'SYSTEM_CONFIG_GUIDE.md', prefix + 'config/SYSTEM_CONFIG_GUIDE.md')
-    for name in web_names:
+    for name in [*web_names, 'usage.html', 'usage-modal.js', 'usage-modal.css']:
         z.write(root / name, prefix + 'web/' + name)
     if (root / 'waypoints-burger1.json').is_file():
         z.write(root / 'waypoints-burger1.json', prefix + 'web/waypoints-burger1.json')
