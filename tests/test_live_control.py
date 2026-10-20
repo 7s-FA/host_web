@@ -25,6 +25,50 @@ def order(status='waiting', stage=1):
 
 
 class LiveControlTest(unittest.TestCase):
+    def test_idle_manual_requires_current_context_and_blocks_duplicate(self):
+        live=LiveControl('secret')
+        data=report();data.update(can_manual_move=True,manual_revision=2)
+        live.update(data,'secret')
+        payload=dict(order_id=None,stage=0,recovery_revision=2,operator_confirmed=True,
+                     device='M2',destination='GO_TO_PARK')
+        for patch in (dict(order_id='old'),dict(recovery_revision=1),dict(operator_confirmed=False),
+                      dict(destination='RESTART')):
+            with self.assertRaises(ValueError):live.issue('manual_move',dict(payload,**patch))
+        self.assertEqual(live.state()['manual_revision'],2)
+        live.issue('manual_move',payload)
+        self.assertEqual(live.pending('secret')[0]['device'],'M2')
+        self.assertIsNone(live.pending('secret')[0]['order_id'])
+        self.assertFalse(live.state()['can_manual_move'])
+        with self.assertRaises(ValueError):live.issue('manual_move',payload)
+
+    def test_manual_still_rejects_running_or_paused_order(self):
+        for status in ('running','paused','waiting'):
+            live=LiveControl('secret');data=report(order=order(status))
+            data['can_manual_move']=True
+            live.update(data,'secret')
+            with self.assertRaises(ValueError):
+                live.issue('manual_move',dict(order_id='order-1',stage=1,recovery_revision=0,
+                                             operator_confirmed=True,device='M1',destination='GO_TO_MAT'))
+
+    def test_failed_reset_requires_current_order_and_manual_confirmation(self):
+        live = LiveControl('secret')
+        data = report(order=order('failed'))
+        data['can_reset'] = True
+        live.update(data, 'secret')
+        self.assertTrue(live.state()['can_reset'])
+        for payload in ({}, {'order_id':'old','operator_confirmed':True},
+                        {'order_id':'order-1','operator_confirmed':'true'}):
+            with self.assertRaises(ValueError): live.issue('reset', payload)
+        live.issue('reset', {'order_id':'order-1','operator_confirmed':True})
+        command = live.pending('secret')[0]
+        self.assertEqual(command['action'], 'reset')
+        self.assertFalse(live.state()['can_reset'])
+        data = report(2, order('failed'), accepted=[command['id']])
+        data['reset_pending'] = True
+        live.update(data, 'secret')
+        self.assertTrue(live.state()['reset_pending'])
+        with self.assertRaises(ValueError): live.issue('reset', {'order_id':'order-1','operator_confirmed':True})
+
     def test_four_communication_units_required(self):
         self.assertEqual(DEVICES, ('M1', 'M2', 'warehouse', 'production'))
         live = LiveControl('secret')
@@ -217,6 +261,76 @@ class LiveControlTest(unittest.TestCase):
             if previous is None: os.environ.pop('ROBOT3_BRIDGE_TOKEN', None)
             else: os.environ['ROBOT3_BRIDGE_TOKEN'] = previous
 
+    def test_adapter_restart_discards_previous_commands(self):
+        live = LiveControl('secret')
+        live.update({**report(), 'controller_id': 'first'}, 'secret')
+        live.issue('start', {'product_type': 'A', 'quantity': 1})
+        self.assertEqual(live.pending('secret')[0]['controller_id'], 'first')
+        live.update({**report(), 'controller_id': 'second'}, 'secret')
+        self.assertEqual(live.pending('secret'), [])
+        self.assertFalse(live.start_in_flight)
+
+    def test_rejected_start_ack_releases_queue_and_readiness_blocks_start(self):
+        live = LiveControl('secret')
+        live.update({**report(), 'can_start': False}, 'secret')
+        with self.assertRaises(ValueError): live.issue('start', {'quantity': 1})
+        live.update(report(2), 'secret')
+        live.issue('start', {'quantity': 1})
+        identity = live.pending('secret')[0]['id']
+        live.update(report(3, accepted=[identity]), 'secret')
+        live.issue('start', {'quantity': 1})
+        self.assertEqual(len(live.pending('secret')), 1)
+
+    def test_manual_order_and_boundary_pause(self):
+        live = LiveControl('secret')
+        live.update(report(), 'secret')
+        with self.assertRaises(ValueError): live.issue('start', {'quantity': 1, 'auto_advance': 'false'})
+        live.issue('start', {'quantity': 1, 'auto_advance': False})
+        command = live.pending('secret')[0]
+        self.assertFalse(command['auto_advance'])
+        live.update(report(2, {**order(), 'auto_advance': False, 'pause_requested': False,
+                                'stage_label': '팔3 적재'}, accepted=[command['id']]), 'secret')
+        live.issue('pause', {})
+        self.assertEqual(live.pending('secret')[0]['action'], 'pause')
+
+    def test_only_explicitly_rejected_next_can_be_requested_again(self):
+        live = LiveControl('secret')
+        conditions = [{'label': '장치 연결', 'done': True}]
+        live.update(report(1, order(), conditions, True), 'secret')
+        live.issue('next', {})
+        identity = live.pending('secret')[0]['id']
+        incoming = report(2, order(), conditions, True, [identity])
+        incoming['rejected_command_ids'] = ['unacknowledged']
+        with self.assertRaises(ValueError): live.update(incoming, 'secret')
+        incoming['rejected_command_ids'] = [identity]
+        incoming['log'] = ['지시 거절: 장치 연결 확인 필요']
+        live.update(incoming, 'secret')
+        self.assertEqual(live.state()['latest_event'], incoming['log'][-1])
+        live.issue('next', {})
+        self.assertNotEqual(live.pending('secret')[0]['id'], identity)
+
 
 if __name__ == '__main__':
     unittest.main()
+
+class RecoveryBoundaryTest(unittest.TestCase):
+    def test_recovery_requires_current_revision_and_no_pending_commands(self):
+        for action in ('retry','manual_move'):
+            live=LiveControl('secret')
+            state=report(order={**order('failed'), 'recovery_revision':3})
+            state.update(can_retry=True,can_manual_move=True)
+            live.update(state,'secret')
+            payload=dict(order_id='order-1',stage=1,recovery_revision=3,operator_confirmed=True,
+                         device='M1',destination='GO_TO_REST')
+            for bad in ({'recovery_revision':2},{'operator_confirmed':False},{'stage':2},{'order_id':'old'}):
+                with self.assertRaises(ValueError):live.issue(action,{**payload,**bad})
+            if action=='manual_move':
+                with self.assertRaises(ValueError):live.issue(action,{**payload,'destination':'RESTART'})
+            live.issue(action,payload)
+            self.assertFalse(live.state()['can_retry']);self.assertFalse(live.state()['can_manual_move'])
+            with self.assertRaises(ValueError):live.issue(action,payload)
+            cmd=live.pending('secret')[0]
+            self.assertEqual(cmd['recovery_revision'],3)
+            state.update(revision=2,accepted_command_ids=[cmd['id']],can_retry=False,can_manual_move=False)
+            live.update(state,'secret')
+            with self.assertRaises(ValueError):live.issue(action,payload)

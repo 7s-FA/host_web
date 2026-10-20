@@ -7,6 +7,8 @@ const assert=require('node:assert/strict');
   for(const path of ['/?live=1','/','/control.html']){
    const page=await browser.newPage({viewport:{width:1440,height:1100}}),errors=[],goals=[],stopSockets=new Set();let stopSocket;
    page.on('pageerror',e=>errors.push(e.message));await page.clock.install();
+   // The embedded read-only map is covered by live-map-browser; isolate this page's stop client.
+   if(path==='/control.html')await page.route('**/*live=1&embedded=1',route=>route.fulfill({contentType:'text/html',body:'<!doctype html><title>Map fixture</title>'}));
    await page.routeWebSocket(/.*/,socket=>socket.onMessage(raw=>{
     const msg=JSON.parse(raw);
     if(msg.op==='subscribe'&&msg.id?.startsWith('robot-stop:')){stopSocket=socket;stopSockets.add(socket);}
@@ -51,6 +53,7 @@ const assert=require('node:assert/strict');
   await page.route('https://robot-stop.test/**',async route=>{const url=new URL(route.request().url());const response=await route.fetch({url:base+url.pathname+url.search});await route.fulfill({response});});
   await page.routeWebSocket(/.*/,socket=>{connections++;socket.close();});await page.goto('https://robot-stop.test/control.html',{waitUntil:'networkidle'});
   for(const robot of ['M1','M2']){assert(await page.locator('[data-stop-robot="'+robot+'"]').isDisabled());assert(await page.locator('[data-restart-robot="'+robot+'"]').isDisabled());}
+  assert(await page.locator('[data-error-reset-robot="M1"]').isDisabled());
   assert.match(await page.locator('[data-stop-status="M1"]').textContent(),/Host PC/);assert.equal(connections,0);await page.close();
   console.log('PASS map/demo/control M1/M2 stop and release: API, fresh-state gating, stop priority, responses, polling, reconnect, mobile, public gating and no automatic motion.');
  }finally{await browser.close();}

@@ -30,10 +30,11 @@ function fixture(browser=false){
   }
   clock=end;
  }
- function graph(index,publishers=['/arm_server'],request){
+ const publishersByArm={};
+ function graph(index,publishers=['/arm_server'],stamp){
   const socket=sockets.at(-1);
-  request=request||socket.sent.filter(m=>m.op==='call_service'&&m.args.topic===`/arm${index+1}/data/_action/status`).at(-1);
-  socket.message({op:'service_response',id:request.id,service:'/rosapi/publishers',result:true,values:{publishers}});
+  if(stamp===undefined){advance(1);publishersByArm['arm'+(index+1)]=publishers;stamp=clock;}
+  socket.message({op:'publish',topic:'/host/device_discovery',msg:{data:JSON.stringify({protocol:1,stamp_ms:stamp,publishers:{...publishersByArm,['arm'+(index+1)]:publishers}})}});
  }
  return {api,client,sockets,changes,timers,advance,graph,now:()=>clock};
 }
@@ -47,7 +48,7 @@ const plain=value=>JSON.parse(JSON.stringify(value));
 const f=fixture();assert.equal(f.sockets.length,0);assert.equal(f.client.snapshot().connected,false);
 f.client.start();f.client.start();assert.equal(f.sockets.length,1);
 const socket=f.sockets[0];socket.open();assert.equal(f.client.snapshot().connected,true);
-const subscriptions=socket.sent.filter(m=>m.op==='subscribe');assert.equal(subscriptions.length,10);
+const subscriptions=socket.sent.filter(m=>m.op==='subscribe');assert.equal(subscriptions.length,11);
 for(let i=1;i<=2;i++){
  const p=subscriptions.find(m=>m.topic===`/burger${i}/amcl_pose`);
  assert.equal(p.type,'geometry_msgs/msg/PoseWithCovarianceStamped');assert.equal(p.qos.reliability,'reliable');assert.equal(p.qos.durability,'transient_local');
@@ -60,9 +61,9 @@ for(let i=1;i<=3;i++){
  assert.equal(feedbackSubscription.type,'host_pkg/action/Arm_FeedbackMessage');
  assert.equal(feedbackSubscription.qos.reliability,'reliable');assert.equal(feedbackSubscription.qos.durability,'volatile');
 }
-assert.equal(socket.sent.filter(m=>m.op==='call_service').length,3);
+assert.equal(socket.sent.filter(m=>m.op==='call_service').length,0);
 status(socket,0,[entry(1,2)]);assert.equal(f.client.snapshot().arms[0].active,false,'retained status needs graph confirmation');
-socket.message({op:'service_response',id:'unrelated',service:'/rosapi/publishers',result:true,values:{publishers:['server']}});
+socket.message({op:'service_response',id:'unrelated',service:'/host/action_publishers',result:true,values:{publishers:['server']}});
 assert.equal(f.client.snapshot().arms[0].available,false);
 f.graph(0);assert.deepEqual(plain(f.client.snapshot().arms[0]),{active:false,state:'unknown',available:true},'joining a paused task cannot animate from retained EXECUTING alone');
 feedback(socket,0,9,'RUNNING');assert.equal(f.client.snapshot().arms[0].active,false,'an unrelated goal does not confirm work activity');
@@ -82,7 +83,7 @@ feedback(socket,0,1,'RUNNING');status(socket,0,[entry(1,3)]);assert.equal(f.clie
 // Activity remains valid without repeated action feedback while graph replies stay fresh.
 for(let i=0;i<8;i++){f.advance(1000);f.graph(0);assert.equal(f.client.snapshot().arms[0].active,true);}
 f.advance(3001);assert.deepEqual(plain(f.client.snapshot().arms[0]),{active:false,state:'unknown',available:false});
-const stale=socket.sent.filter(m=>m.op==='call_service'&&m.args.topic.includes('/arm1/'))[0];
+const stale=f.now()-3001;
 f.graph(0,['server'],stale);assert.equal(f.client.snapshot().arms[0].available,false);
 f.graph(0);assert.deepEqual(plain(f.client.snapshot().arms[0]),{active:false,state:'unknown',available:true},'graph recovery alone cannot revive an old goal');
 status(socket,0,[entry(1,2)]);assert.equal(f.client.snapshot().arms[0].active,false,'fresh status still needs feedback after graph recovery');
@@ -92,7 +93,7 @@ f.advance(1000);f.graph(0);assert.equal(f.client.snapshot().arms[0].state,'unkno
 status(socket,0,[]);assert.equal(f.client.snapshot().arms[0].state,'idle');
 status(socket,0,[entry(3,6)]);assert.equal(f.client.snapshot().arms[0].state,'error');
 // Delayed discovery replies must not overwrite a newer no-publisher result.
-f.advance(1000);const older=socket.sent.filter(m=>m.op==='call_service'&&m.args.topic.includes('/arm1/')).at(-1);
+f.advance(1000);const older=f.now();
 f.advance(1000);f.graph(0,[]);f.graph(0,['server'],older);assert.equal(f.client.snapshot().arms[0].available,false);
 
 for(let i=0;i<2;i++){
@@ -115,6 +116,8 @@ socket.close();assert.equal(f.client.snapshot().connected,false);assert(f.client
 assert(f.client.snapshot().arms.every(a=>!a.active&&!a.available&&a.state==='unknown'));
 f.advance(2999);assert.equal(f.sockets.length,1);f.advance(1);assert.equal(f.sockets.length,2);
 const second=f.sockets[1];second.open();
+second.message({op:'publish',topic:'/burger2/amcl_pose',msg:pose(f.now()-600000,1)});
+assert.equal(f.client.snapshot().robots[1].pose.stamp,f.now()-600000,'old retained position is visibly stale, never stamped as current');
 socket.message({op:'publish',topic:'/burger1/amcl_pose',msg:pose(f.now())});assert.equal(f.client.snapshot().robots[0].pose,null);
 status(second,0,[entry(1,2)]);assert.equal(f.client.snapshot().arms[0].active,false);f.graph(0);
 assert.equal(f.client.snapshot().arms[0].state,'unknown','a new connection cannot reuse previous RUNNING feedback');
@@ -122,8 +125,7 @@ feedback(second,0,1,'RUNNING');assert.equal(f.client.snapshot().arms[0].active,t
 f.client.stop();assert.equal(f.timers.size,0);f.advance(5000);assert.equal(f.sockets.length,2);assert.equal(f.client.snapshot().connected,false);
 f.client.start();assert.equal(f.sockets.length,3);f.client.stop();
 for(const s of f.sockets)for(const message of s.sent){
- assert(['subscribe','call_service'].includes(message.op),'Only read-only websocket operations are permitted');
- if(message.op==='call_service'){assert.equal(message.service,'/rosapi/publishers');assert.equal(message.type,'rosapi_msgs/srv/Publishers');}
+ assert.equal(message.op,'subscribe','No service polling or robot commands are permitted');
 }
 assert(f.changes.length>0);
 const browser=fixture(true);const noCallback=browser.api.create({url:'ws://localhost:9090',now:browser.now});

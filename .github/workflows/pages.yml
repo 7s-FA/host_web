@@ -36,6 +36,8 @@ jobs:
           node tests/ros-client.test.cjs
           node tests/robot-panel.test.cjs
           node tests/robot-stop-client.test.cjs
+          node tests/combined-reset.test.cjs
+          node tests/cell-error-reset.test.cjs
           node tests/robot-battery-client.test.cjs
           node tests/device-connection-client.test.cjs
           node tests/host-stages.test.cjs

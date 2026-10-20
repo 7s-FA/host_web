@@ -1,17 +1,31 @@
 (()=>{'use strict';
-const configs=[{robot:'burger1',action:'/M1/data',ip:'10.10.142.101',id:'M1'},{robot:'burger2',action:'/M2/data',ip:'10.10.142.102',id:'M2'}];
+const configs=[{robot:'burger1',action:'/M1/data',id:'M1'},{robot:'burger2',action:'/M2/data',id:'M2'}];
 const routes=[['GO_TO_MAT','재료창고'],['GO_TO_ASM','조립대'],['GO_TO_REST','REST'],['GO_TO_PARK','지정 주차장']];
-const states=new Map();let ws,reconnect,closed=false;
+const states=new Map();let ws,reconnect,closed=false,host=null,hostAt=0;
+const hostControl=new URLSearchParams(location.search).get('host_control')==='1';
+const hostAllowsMove=()=>!hostControl||(host?.bridge_connected&&Date.now()-hostAt<3500&&!host.pending_commands&&!host.reset_pending&&!host.manual_move&&(!host.order||['idle','done'].includes(host.order.status)||host.can_manual_move));
+async function refreshHost(){if(!hostControl)return;try{const r=await fetch('/api/live/state',{cache:'no-store'});if(!r.ok)throw Error();host=await r.json();hostAt=Date.now();}catch{host=null;}for(const s of states.values())render(s);}
 const el=(p,s)=>p.querySelector(s),connected=()=>ws?.readyState===WebSocket.OPEN;
 function note(s,text){const row=document.createElement('li');row.textContent=new Date().toLocaleTimeString('ko-KR')+' · '+text;s.log.append(row);while(s.log.children.length>50)s.log.firstChild.remove();s.log.scrollTop=s.log.scrollHeight;}
 function render(s){const fresh=connected()&&Date.now()-s.ownerAt<3500,running=s.mission?.status==='running',pending=!!s.pending;
  el(s.card,'.pill').textContent=!fresh?'상태 수신 대기':running?'작업 중':pending?'명령 응답 대기':'연결됨';
- s.card.querySelectorAll('[data-command]').forEach(b=>{b.disabled=b.dataset.command==='EMER_STOP'?!connected():b.dataset.command==='RESTART'?!fresh||running||pending:!fresh||!!s.owner.error||running||pending;});
+ s.card.querySelectorAll('[data-command]').forEach(b=>{b.disabled=b.dataset.command==='EMER_STOP'?!connected():b.dataset.command==='RESTART'?!fresh||running||pending:!fresh||!!s.owner.error||running||pending||!hostAllowsMove();});
+ if(hostControl&&!hostAllowsMove())el(s.card,'.notice').textContent='주문 진행 중이거나 Host 상태 확인 필요 · 목적지 변경 잠김';
  const values={mission:s.mission?`${s.mission.destination||'—'} / ${s.mission.stage||s.mission.status}${s.mission.status==='running'?'':' (최근 기록)'}`:'대기',owner:fresh?s.owner.mode:'수신 끊김',dock:Date.now()-s.dockAt<3500?s.dock.state:'도킹 비활성',ir:Date.now()-s.irAt<2000?(s.ir?'감지':'미감지'):'도킹·REST 중 수신',velocity:Date.now()-s.odomAt<2000&&s.odom?`${s.odom.twist.twist.linear.x.toFixed(3)} m/s · ${s.odom.twist.twist.angular.z.toFixed(3)} rad/s`:'—',error:s.mission?.error||s.owner.error||s.dock?.reason||'—'};
  for(const [key,value]of Object.entries(values))el(s.card,'[data-value="'+key+'"]').textContent=value;
  el(s.card,'pre').textContent=JSON.stringify({robot:s.robot,telemetry_age_s:s.ownerAt?(Date.now()-s.ownerAt)/1000:null,mission:s.mission,communication:s.owner,docking:s.dock,action:s.result},null,2);
 }
-function issue(s,command){if(!connected())return;const b=el(s.card,'[data-command="'+command+'"]');if(b.disabled)return;
+async function issue(s,command){if(!connected())return;const b=el(s.card,'[data-command="'+command+'"]');if(b.disabled)return;
+ if(hostControl&&command.startsWith('GO_TO_')){
+  await refreshHost();if(!hostAllowsMove())return;
+  if(host?.order?.status==='failed'){
+   if(!confirm(s.id+' 수동 이동: 로봇과 리니어가 멈췄고 이동 경로·적재 상태를 확인했습니까? 실패 주문 단계는 유지됩니다.'))return;
+   const order=host.order;s.pending='host-manual';render(s);
+   try{const response=await fetch('/api/live/manual_move',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:s.id,destination:command,order_id:order.id,stage:order.stage,recovery_revision:order.recovery_revision||0,operator_confirmed:true})});const body=await response.json();if(!response.ok)throw Error(body.error||'Host 지시 거절');note(s,'Host 수동 이동 요청 · 작업 결과는 관제에서 확인');}
+   catch(error){note(s,error.message);el(s.card,'.notice').textContent=error.message;}
+   finally{s.pending=null;await refreshHost();render(s);}return;
+  }
+ }
  const id=s.robot+'-'+crypto.randomUUID(),control=command==='EMER_STOP';if(!control)s.pending=id;
  s.actions.set(id,command);if(!control)s.issuedUnix=Date.now()/1000;el(s.card,'.notice').textContent='명령 전달: '+(routes.find(x=>x[0]===command)?.[1]||command)+' · 로봇 응답 대기';note(s,command+' 요청');render(s);
  ws.send(JSON.stringify({op:'send_action_goal',id,action:s.action,action_type:'host_pkg/action/Burger',args:{command,cmd_val:command.startsWith('GO_TO_')?100.:0.},feedback:true}));
@@ -35,5 +49,6 @@ function receive(m){if(m.op==='publish'){const s=[...states.values()].find(x=>m.
  }}
 function connect(){if(closed)return;ws=new WebSocket('ws://'+location.hostname+':9090');ws.onopen=()=>{document.getElementById('connection').textContent='ROS 통신 연결됨';subscribe()};ws.onmessage=e=>{try{receive(JSON.parse(e.data))}catch{}};ws.onclose=()=>{document.getElementById('connection').textContent='통신 끊김 · 재연결 중';for(const s of states.values())render(s);if(!closed)reconnect=setTimeout(connect,3000)};ws.onerror=()=>ws.close();}
 setInterval(()=>{for(const s of states.values())render(s)},1000);
-addEventListener('pagehide',()=>{closed=true;clearTimeout(reconnect);ws?.close()});connect();
+const hostPoll=setInterval(refreshHost,1000);refreshHost();
+addEventListener('pagehide',()=>{closed=true;clearInterval(hostPoll);clearTimeout(reconnect);ws?.close()});if(location.protocol==='http:'&&['localhost','127.0.0.1'].includes(location.hostname))connect();else document.getElementById('connection').textContent='Host PC 로컬 화면에서 사용하세요';
 })();

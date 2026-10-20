@@ -1,6 +1,6 @@
 # Robot3 공정 시뮬레이션
 
-A제품 또는 B제품 1~2개의 주문 → 부품 적재 → 운반 → 티칭 조립 → 파렛트 적재 → 복귀를 웹에서 재생합니다. 기본 공정 지도는 시뮬레이션이며, **실물 상태 보기**에서는 ROS로 받은 위치와 장치 상태를 표시합니다. 별도의 **로봇 제어** 패널은 Host PC의 rosbridge와 준비된 M1·M2에 연결해 실제 이동을 요청합니다. 메인 화면과 Host 관제에서도 M1·M2의 **정지·정지 해제**를 요청하고 배터리를 확인할 수 있습니다. 전체 자동 공정 제어기는 별도입니다.
+A제품 또는 B제품 1~2개의 주문 → 부품 적재 → 운반 → 티칭 조립 → 파렛트 적재 → 복귀를 웹에서 재생합니다. 기본 공정 지도는 시뮬레이션이며, **실물 상태 보기**에서는 ROS로 받은 위치와 장치 상태를 표시합니다. 별도의 **로봇 제어** 패널은 Host PC의 rosbridge와 준비된 M1·M2에 연결해 실제 이동을 요청합니다. 메인 화면과 Host 관제에서도 M1·M2의 **정지·정지 해제**를 요청하고 배터리를 확인할 수 있습니다. 전체 공정은 형제 `host_backend`와 연결한 `control.html`에서 제어합니다.
 
 ## 열기
 
@@ -11,7 +11,17 @@ A제품 또는 B제품 1~2개의 주문 → 부품 적재 → 운반 → 티칭 
 
 ## Host PC 한 번에 실행
 
-ROS 2 Jazzy가 설치된 Host PC에서 로봇 제어 패널·실물 상태 보기용 웹 서버(8082)와 rosbridge(9090)를 함께 실행합니다. Host의 저장소 경로는 `~/host_web`, `~/final_project_host/host_backend` 기준입니다. **이 방법은 Git으로 clone한 전체 소스 기준입니다.** 사이트의 `host-test.zip`은 HTTP 시험용이며 통합 실행 스크립트를 포함하지 않습니다.
+`final_project/host_web`과 `final_project/host_backend`를 함께 둔 관제 PC에서는 최상위 공통 실행기를 사용합니다. 현재 PC에서 웹(8082)·rosbridge(9090)·rosapi·기존 관제 백엔드를 한 번에 실행하려면:
+
+```bash
+bash $HOME/final_project/start_host.sh
+# 노드를 실행하지 않는 점검
+bash $HOME/final_project/start_host.sh --check
+```
+
+공통 설정은 `../config/host.env`, 빌드·로그는 `../.runtime/host/`입니다. 현재 폴더의 `bash start_host.sh`는 기존 의미대로 **웹·rosbridge·rosapi만** 실행합니다. 상세 사용법과 모의 검증 절차은 [관제 PC 안내](../README.md)를 확인하세요.
+
+아래는 공통 실행기 없이 `host_web`을 단독 clone한 경우의 준비 방법입니다. 형제 폴더 `../host_backend`를 기본 사용하며 다른 위치는 `HOST_BACKEND_DIR`로 지정합니다. **이 방법은 Git으로 clone한 전체 소스 기준입니다.** 사이트의 `host-test.zip`은 HTTP 시험용이며 통합 실행 스크립트를 포함하지 않습니다.
 
 최초 준비는 한 번만 실행합니다. 내려받은 기존 빌드 경로와 섞이지 않도록 `install_local`에 Action 타입을 빌드합니다.
 
@@ -19,7 +29,7 @@ ROS 2 Jazzy가 설치된 Host PC에서 로봇 제어 패널·실물 상태 보�
 sudo apt update
 sudo apt install ros-jazzy-rosbridge-suite python3-colcon-common-extensions
 source /opt/ros/jazzy/setup.bash
-cd ~/final_project_host/host_backend
+cd ../host_backend
 colcon --log-base log_local build \
   --base-paths src/host_pkg \
   --build-base build_local \
@@ -30,11 +40,11 @@ colcon --log-base log_local build \
 이후에는 터미널 하나에서 실행합니다.
 
 ```bash
-cd ~/host_web
+cd ../host_web
 bash start_host.sh
 ```
 
-Host PC 브라우저에서 `http://localhost:8082/`를 열고 **로봇 제어 ↗**를 누릅니다. 실행 스크립트는 ROS 환경과 Action 타입을 불러오고 `ROS_DOMAIN_ID=40`, `ROS_LOCALHOST_ONLY=0`으로 `host/host_control.launch.py`를 실행합니다. 두 서버는 같은 PC에서만 접속하도록 바인딩합니다. 로봇과 Host의 네트워크·DDS 검색 설정도 서로 맞아야 합니다.
+Host PC 브라우저에서 `http://localhost:8082/?live=1`을 엽니다. 실행 스크립트는 ROS 환경과 Action 타입을 불러오고 기본 `ROS_DOMAIN_ID=40`, `ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET`, `RMW_IMPLEMENTATION=rmw_fastrtps_cpp`로 `host/host_control.launch.py`를 실행합니다. 두 서버는 같은 PC에서만 접속하도록 바인딩합니다. 로봇과 Host의 네트워크·DDS 검색 설정도 서로 맞아야 합니다.
 
 각 이동 로봇은 Pi에서 `host-ready` 준비를 마쳐 `process` 모드와 Action 서버가 실행 중이어야 합니다. 이 런치는 개별 제어·실제 상태 확인용이며, 전체 공정 제어기 `host_backend/src/host_pkg/src/main.py`와 로봇 준비 명령은 실행하지 않습니다. 시작할 때 이동 명령도 보내지 않습니다.
 
@@ -50,7 +60,7 @@ Host PC에서 `bash start_host.sh`로 실행한 뒤 메인 화면의 **실물 �
 
 작업 시작 전에 실물 상태 화면을 열어 두세요. 로봇팔 피드백은 상태가 바뀔 때 전달되므로, 작업 도중 새로 열거나 연결이 복구되면 해당 작업의 새 피드백을 받을 때까지 **상태 미확인**으로 표시합니다.
 
-상태 모니터링은 수신 전용이며 웹 주문·재생 상태를 송신하지 않습니다. 사용자가 M1·M2의 **정지·정지 해제**를 누르면 해당 실물 로봇에 Action을 보냅니다. 실제 주문은 기존 Host 프로그램에서 실행하고, 개별 이동은 로봇 제어 패널을 사용합니다. `control.html`의 주문·단계 진행은 여전히 별도 Host 어댑터가 필요합니다.
+상태 모니터링은 수신 전용이며 웹 주문·재생 상태를 송신하지 않습니다. 사용자가 M1·M2의 **정지·정지 해제**를 누르면 해당 실물 로봇에 Action을 보냅니다. 전체 주문·단계 진행은 통합 실행 후 `control.html`에서 제어하고, 개별 이동은 로봇 제어 패널을 사용합니다.
 
 ## 장치 연결 표시등
 
@@ -100,7 +110,7 @@ bash start_host.sh
 6. `기록 내려받기`는 현재 시점까지의 이벤트·카운트를 JSON으로 저장합니다.
 7. 새 주문 제품·수량을 바꾸려면 `초기화`를 누릅니다. 완료 후에는 바로 새 주문을 넣을 수 있습니다.
 
-A·B제품은 같은 설명용 이동 경로와 공정 시간을 사용합니다. 선택한 제품은 주문 표시·지그 표기·이벤트·내려받는 기록에 반영되며, B제품의 실제 동작이나 공정 시간을 재현하는 것은 아닙니다. Host 관제의 실제 주문·완료 검증에는 별도 Host 어댑터가 필요합니다.
+A·B제품은 같은 설명용 이동 경로와 공정 시간을 사용합니다. 선택한 제품은 주문 표시·지그 표기·이벤트·내려받는 기록에 반영되며, B제품의 실제 동작이나 공정 시간을 재현하는 것은 아닙니다. 통합 실행에서는 `host_backend`가 실제 Action 완료 결과로 주문을 진행합니다.
 
 ## 공정 규칙
 
@@ -166,7 +176,7 @@ A·B제품은 같은 설명용 이동 경로와 공정 시간을 사용합니다
 
 [웨이포인트 화면](waypoints.html)은 공개된 M1의 `map` 좌표 JSON과 Confluence 도면, 목적지별 경유 순서를 표시합니다. 1~4번은 최종 목적지가 아니라 경유·회전 지점입니다. [시뮬레이션 지도](index.html)는 같은 번호를 세로 배치도의 개념 위치에 표시하고 두 이동 로봇이 해당 지점을 통과하도록 경로를 나눕니다. WP1은 M1 초기위치, WP4는 M2 초기위치의 통로 합류점이며 WP3는 제작공정 합류점입니다. 경유점에서 Host 완료 단계를 추가하지 않습니다. 목적지별 순서는 [routes-burger1.json](routes-burger1.json)과 [routes-burger2.json](routes-burger2.json)에 있으며 실제 지도에서 확인해야 합니다. 실측 좌표를 시뮬레이션 픽셀에 그대로 환산한 것은 아니며 실제 Nav2·도킹 제어는 아직 연결되지 않았습니다.
 
-[Host 관제](control.html)는 지도·시뮬레이션 엔진 없이 **A제품/B제품**과 수량 **1개/2개**를 버튼으로 선택해 주문합니다. 통신 상태는 **M1·M2·자재창고·제작공정** 네 단위로 표시하며, 제작공정은 로봇팔 2·3, 리니어와 카메라를 통합합니다. 각 장치와 Host의 **로그** 버튼은 작은 팝업으로 기록을 표시하고, 통신이 끊겨도 마지막 로그를 확인할 수 있습니다. 공개 Pages에서는 미연결 안내만 보이며, Host PC에서 `python3 host/server.py`를 실행한 뒤 `http://127.0.0.1:8082/control.html`로 접속합니다. 실제 ROS 2 장치와 통신하려면 팀의 Host 어댑터가 ROS Action 결과를 검증한 후 [관제 API 계약](HOST_CONTROL_GUIDE.md)대로 상태를 보고하고 명령을 수락해야 합니다. 현재 패키지에 그 ROS 실행부는 아직 없습니다. 다음 단계 버튼은 어댑터가 모든 선행 조건 완료를 보고할 때만 활성화됩니다. 메인 공정 시뮬레이션에서도 같은 A제품/B제품·1개/2개 선택 버튼을 사용하며, 지도는 두 제품에 공통 설명용 동작을 표시합니다.
+[Host 관제](control.html)는 지도·시뮬레이션 엔진 없이 **A제품/B제품**과 수량 **1개/2개**를 버튼으로 선택해 주문합니다. 통신 상태는 **M1·M2·자재창고·제작공정** 네 단위로 표시하며, 제작공정은 로봇팔 2·3, 리니어와 카메라를 통합합니다. 각 장치와 Host의 **로그** 버튼은 작은 팝업으로 기록을 표시하고, 통신이 끊겨도 마지막 로그를 확인할 수 있습니다. 공개 Pages에서는 미연결 안내만 보이며, Host PC에서 `python3 host/server.py`를 실행한 뒤 `http://127.0.0.1:8082/control.html`로 접속합니다. 실제 ROS 2 장치와 통신하려면 팀의 Host 어댑터가 ROS Action 결과를 검증한 후 [관제 API 계약](HOST_CONTROL_GUIDE.md)대로 상태를 보고하고 명령을 수락해야 합니다. 통합 폴더에는 `host_backend`의 실행부가 연결되어 있습니다. `--mock`로 실제 ROS Action 경로를 모의 검증할 수 있습니다. 웹만 내려받은 ZIP에는 이 실행부가 포함되지 않습니다. 다음 단계 버튼은 어댑터가 모든 선행 조건 완료를 보고할 때만 활성화됩니다. 메인 공정 시뮬레이션에서도 같은 A제품/B제품·1개/2개 선택 버튼을 사용하며, 지도는 두 제품에 공통 설명용 동작을 표시합니다.
 
 ## Host 시스템 설정
 

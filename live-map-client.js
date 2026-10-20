@@ -3,14 +3,12 @@
  'use strict';
  const Model=typeof module!=='undefined'&&module.exports?require('./live-map-model.js'):root.LiveMapModel;
  function create({url,onChange=()=>{},WebSocket:Socket=root.WebSocket,now=Date.now}){
-  let started=false,socket=null,reconnect=null,poll=null,connected=false,error=null,serial=0;
+  let started=false,socket=null,reconnect=null,opening=null,poll=null,connected=false,error=null,serial=0;
   let robots,arms,missionTimes;
-  const requests=new Map();
   function clear(){
    robots=Array.from({length:2},()=>({pose:null,mission:null}));
    missionTimes=[0,0];
-   arms=Array.from({length:3},()=>({goals:new Map(),seen:false,publishers:false,graphAt:null,graphSerial:0}));
-   requests.clear();
+   arms=Array.from({length:3},()=>({goals:new Map(),seen:false,publishers:false,graphAt:null,}));
   }
   function expireGraphs(){
    for(const arm of arms)if(arm.graphAt!==null&&now()-arm.graphAt>3000){
@@ -41,32 +39,27 @@
    return Array.isArray(bytes)&&bytes.length===16&&bytes.every(n=>Number.isInteger(n)&&n>=0&&n<=255)?bytes.join('-'):null;
   }
   function send(message){socket.send(JSON.stringify(message));}
-  function checkPublishers(){
-   for(const [id,request] of requests)if(now()-request.at>3000)requests.delete(id);
-   for(let index=0;index<3;index++){
-    const order=++serial,id='live-map-publishers-'+order;
-    requests.set(id,{index,at:now(),order});
-    send({op:'call_service',id,service:'/rosapi/publishers',type:'rosapi_msgs/srv/Publishers',args:{topic:`/arm${index+1}/data/_action/status`}});
-   }
-   changed();
-  }
   function receive(message){
    expireGraphs();
-   if(message.op==='service_response'&&message.service==='/rosapi/publishers'){
-    const request=requests.get(message.id);
-    if(!request)return;
-    requests.delete(message.id);
-    const arm=arms[request.index],age=now()-request.at;
-    if(age<0||age>3000||request.order<arm.graphSerial)return;
-    arm.graphAt=request.at;arm.graphSerial=request.order;
-    arm.publishers=message.result===true&&Array.isArray(message.values?.publishers)&&message.values.publishers.some(name=>typeof name==='string'&&name.length>0);
-    if(!arm.publishers){arm.goals.clear();arm.seen=false;}
+   if(message.op==='publish'&&message.topic==='/host/device_discovery'){
+    let data;try{data=JSON.parse(message.msg?.data);}catch{return;}
+    const age=now()-data?.stamp_ms;
+    if(!data||data.protocol!==1||!Number.isFinite(data.stamp_ms)||age<0||age>3000||!data.publishers||typeof data.publishers!=='object'||Array.isArray(data.publishers))return;
+    arms.forEach((arm,index)=>{
+     if(arm.graphAt!==null&&data.stamp_ms<=arm.graphAt)return;
+     const publishers=data.publishers['arm'+(index+1)];
+     arm.graphAt=data.stamp_ms;
+     arm.publishers=Array.isArray(publishers)&&publishers.length>0&&publishers.every(name=>typeof name==='string'&&name.trim());
+     if(!arm.publishers){arm.goals.clear();arm.seen=false;}
+    });
     changed();return;
    }
    if(message.op!=='publish')return;
    for(let index=0;index<2;index++){
     if(message.topic===`/burger${index+1}/amcl_pose`){
-     const pose=Model.parsePose(message.msg,index,now());
+     // AMCL may retain an older position while parked. Keep its original timestamp
+     // so the view can show a gray last-known position without claiming freshness.
+     const pose=Model.parsePose(message.msg,index,now(),{allowStale:true});
      if(pose&&(!robots[index].pose||pose.stamp>=robots[index].pose.stamp)){robots[index].pose=pose;changed();}
      return;
     }
@@ -106,11 +99,14 @@
    let current;
    try{current=new Socket(url);socket=current;}
    catch(_){error='ROS 연결 실패';changed();schedule();return;}
+   opening=root.setTimeout(()=>{if(socket===current&&!connected){error='ROS 연결 시간 초과';current.close();}},5000);
    current.onopen=()=>{
     if(socket!==current||!started)return;
-    connected=true;error=null;
+    root.clearTimeout(opening);opening=null;connected=true;error=null;
     const retained={history:'keep_last',depth:1,reliability:'reliable',durability:'transient_local'};
     function subscribe(topic,type,qos){send({op:'subscribe',id:'live-map:'+topic,topic,type,queue_length:1,...(qos?{qos}:{})});}
+    try{
+    subscribe('/host/device_discovery','std_msgs/msg/String',{...retained,durability:'volatile'});
     for(let i=1;i<=2;i++){
      subscribe(`/burger${i}/amcl_pose`,'geometry_msgs/msg/PoseWithCovarianceStamped',retained);
      subscribe(`/burger${i}/mission/status`,'std_msgs/msg/String');
@@ -119,7 +115,8 @@
      subscribe(`/arm${i}/data/_action/status`,'action_msgs/msg/GoalStatusArray',retained);
      subscribe(`/arm${i}/data/_action/feedback`,'host_pkg/action/Arm_FeedbackMessage',{...retained,durability:'volatile'});
     }
-    checkPublishers();poll=root.setInterval(checkPublishers,1000);
+    }catch(_){error='ROS 구독 실패';current.close();return;}
+    changed();poll=root.setInterval(changed,500);
    };
    current.onmessage=event=>{
     if(socket!==current||!connected)return;
@@ -128,14 +125,14 @@
    };
    current.onclose=()=>{
     if(socket!==current)return;
-    socket=null;connected=false;error=error||'ROS 연결 끊김';root.clearInterval(poll);poll=null;clear();changed();schedule();
+    socket=null;connected=false;error=error||'ROS 연결 끊김';root.clearInterval(poll);root.clearTimeout(opening);opening=poll=null;clear();changed();schedule();
    };
    current.onerror=()=>{if(socket===current){error='ROS 연결 오류';current.close();}};
    changed();
   }
   function start(){if(started)return;started=true;connect();}
   function stop(){
-   started=false;root.clearTimeout(reconnect);root.clearInterval(poll);reconnect=poll=null;
+   started=false;root.clearTimeout(reconnect);root.clearTimeout(opening);root.clearInterval(poll);reconnect=opening=poll=null;
    const previous=socket;socket=null;connected=false;error=null;clear();previous?.close();changed();
   }
   clear();return {start,stop,snapshot};

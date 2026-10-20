@@ -38,7 +38,7 @@ function checkSubscriptions(socket){
 function checkGoal(goal,robot,command){assert.deepEqual(goal,{op:'send_action_goal',id:goal.id,action:'/'+robot+'/data',action_type:'host_pkg/action/Burger',args:{command,cmd_val:0},feedback:true});}
 
 const f=fixture(),c=f.client;
-assert.equal(f.sockets.length,0);assert.deepEqual(plain(c.snapshot()),{connected:false,robots:{M1:{phase:'idle',message:'정지 요청 대기',canRestart:false},M2:{phase:'idle',message:'정지 요청 대기',canRestart:false}}});
+assert.equal(f.sockets.length,0);assert.deepEqual(plain(c.snapshot()),{connected:false,robots:{M1:{phase:'idle',message:'정지 요청 대기',canRestart:false,canResetError:false},M2:{phase:'idle',message:'정지 요청 대기',canRestart:false,canResetError:false}}});
 for(const name of ['M3','burger1','__proto__',null]){assert.equal(c.requestStop(name),false);assert.equal(c.requestRestart(name),false);}
 assert.equal(c.requestRestart('M1'),false);assert.equal(c.requestStop('M1'),false);assert.equal(c.snapshot().robots.M1.phase,'error');assert.equal(f.sockets.length,0);
 c.start();c.start();assert.equal(f.sockets.length,1);const socket=f.sockets[0];socket.open();assert.equal(c.snapshot().connected,true);checkSubscriptions(socket);assert.equal(goals(socket).length,0,'Opening only subscribes');assert.equal(c.requestRestart('M1'),false,'Release requires fresh robot state');
@@ -89,5 +89,27 @@ const subscribeFailure=fixture();subscribeFailure.client.start();subscribeFailur
 const browser=fixture(true),withoutCallback=browser.api.create(browser.options);withoutCallback.start();browser.sockets[0].open();assert(withoutCallback.requestStop('M1'));withoutCallback.close();assert.equal(browser.timers.size,0);
 assert.equal(new Set(goals(socket).map(m=>m.id)).size,goals(socket).length,'Every explicit request has a unique ID');
 for(const s of [...f.sockets,...broken.sockets,...browser.sockets])for(const m of goals(s)){assert(['EMER_STOP','RESTART'].includes(m.args.command));assert.equal(m.args.cmd_val,0);}
+// GO_TO reset uses the server's stationary-only RESTART; it never starts a route.
+const reset=fixture();reset.client.start();const rs=reset.sockets[0];rs.open();
+const failed=(robot,extra={})=>rs.message({op:'publish',topic:'/burger'+robot.at(-1)+'/mission/status',msg:{data:JSON.stringify({status:'failed',destination:'asm',command_id:'failed-goal',...extra})}});
+for(const robot of ['M1','M2']){
+ owner(rs,robot);assert.equal(reset.client.requestErrorReset(robot),false,'No mission evidence');
+ failed(robot,{status:'running'});assert.equal(reset.client.requestErrorReset(robot),false);
+ failed(robot,{destination:'unknown'});assert.equal(reset.client.requestErrorReset(robot),false);
+ failed(robot);assert(reset.client.snapshot().robots[robot].canResetError);
+ assert(reset.client.requestErrorReset(robot));const goal=goals(rs).at(-1);checkGoal(goal,robot,'RESTART');
+ assert.equal(reset.client.requestErrorReset(robot),false,'Duplicate reset is blocked');
+ assert.equal(reset.client.requestRestart(robot),false,'No overlapping releases');
+ result(rs,goal);assert.match(reset.client.snapshot().robots[robot].message,/이동 오류 초기화 확인 완료.*주문 유지/);
+ const count=goals(rs).length;reset.advance(3501);owner(rs,robot);
+ assert.equal(reset.client.requestErrorReset(robot),false,'Stale failed mission cannot authorize reset');
+ assert.equal(goals(rs).length,count,'Successful reset never sends GO_TO');
+ failed(robot);assert(reset.client.requestErrorReset(robot));const pending=goals(rs).at(-1);
+ assert(reset.client.requestStop(robot),'Stop overrides pending reset');const stop=goals(rs).at(-1);
+ result(rs,pending);assert.equal(reset.client.snapshot().robots[robot].command,'EMER_STOP');result(rs,stop);
+}
+rs.close();reset.advance(3000);const reconnected=reset.sockets.at(-1);reconnected.open();owner(reconnected,'M1');
+assert.equal(reset.client.requestErrorReset('M1'),false,'Old failures do not survive reconnection');
+assert.equal(goals(reconnected).length,0);reset.client.close();
 assert.equal(typeof require('../robot-stop-client.js').create,'function');
 console.log('PASS robot stop/release client: exact API, fresh-state gating, stop priority, strict responses, timeout, reconnect, no replay and timer cleanup.');

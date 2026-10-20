@@ -24,9 +24,11 @@
     <p class="eyebrow">HOST PC · QUICK START</p>
     <h1>실물 테스트 <span>사용방법</span></h1>
     <p class="intro">매일 쓰는 실행·종료 순서입니다. 명령은 관제 PC 터미널에서 실행하세요.</p>
-    <p class="scope-note">이 안내의 <strong>hostamr · hostrun</strong>는 이 관제 PC의 <strong>/home/ryu/final_project</strong>에 설정한 명령입니다.</p>
+    <p class="scope-note">이 안내의 <strong>hostamr · hostrun</strong>는 이 관제 PC의 <strong>$HOME/final_project</strong>에 설정한 명령입니다.</p>
     <nav class="guide-nav" aria-label="사용방법 바로가기"><a href="#first-start">처음 실행</a><a href="#servers">서버 켜기·끄기</a></nav>
     <div class="flow" aria-label="준비 순서"><span>전원·배치</span><b>→</b><span>M1·M2 준비</span><b>→</b><span>관제 실행</span><b>→</b><span>1개 수동 시험</span></div>
+
+    <p class="scope-note"><strong>자재창고·조립대 오류 초기화:</strong> 모든 장치 정지·초기 배치 확인 후 해당 장치 카드의 버튼을 누릅니다. 남은 팔 작업 종료 확인 후 실패 주문을 비웁니다. 원점 복귀·공정 재개·M1/M2 정지 잠금 해제는 하지 않습니다. 작업이 실행 중이면 거절되며, 자재창고는 업데이트된 팔1 서버가 연결되어야 사용할 수 있습니다. 하드웨어 정리가 확인되지 않은 오류는 현장 점검이 필요합니다.</p>
 
     <div id="first-start" class="anchor-target">
       <section class="step">
@@ -37,7 +39,7 @@
 
       <section class="step">
         <div class="step-head"><span class="number">02</span><h2>호스트에서 M1·M2 준비</h2><span class="where">관제 PC 터미널</span></div>
-        <div class="command"><pre><code>hostamr --ready --parked</code></pre><button class="copy" type="button" aria-label="두 로봇 준비 명령 복사">복사</button></div>
+        <div class="command"><pre><code>hostready</code></pre><button class="copy" type="button" aria-label="두 로봇 준비 명령 복사">복사</button></div>
         <p><strong>M1 → M2 순서</strong>로 센서·위치·제어 서버를 준비합니다. 전원을 켠 뒤 실물 시험을 준비할 때 사용하세요.</p>
         <p class="caution">모터 토크를 켜고 정지 잠금을 해제합니다. 목적지 이동은 요청하지 않습니다.</p>
         <p class="success">두 로봇 모두 준비 결과 <strong>success: true</strong> → 상태 <strong>mode: process</strong>, <strong>busy: false</strong>를 확인하세요.</p>
@@ -47,7 +49,11 @@
       <section class="step">
         <div class="step-head"><span class="number">03</span><h2>관제 실행과 연결 확인</h2><span class="where">관제 PC 터미널</span></div>
         <div class="command"><pre><code>hostrun</code></pre><button class="copy" type="button" aria-label="관제 실행 명령 복사">복사</button></div>
+        <p><strong>새 실물 관제 실행 시:</strong> 서버 확인 → 팔의 중단 작업 정리·M1/M2 정지 잠금 해제 → 팔1 A 시작 자세 → 팔2·3 저장 안전 자세 → 리니어 수축 위치 → 웹화면 순서로 준비합니다. 준비 이동 전 작업 공간과 적재물을 확인하세요.</p>
+        <p class="note">진행 중인 작업이나 정지 미확인 상태에서는 준비를 중단합니다. 이전 이동을 재개하거나 주차 좌표를 재설정하지 않습니다. 리니어는 기존 두 위치 중 뒤로 들어간 위치를 사용합니다.</p>
+        <p class="note">미정리 주문이 있으면 잠금 해제·이동 준비를 생략하고 복구 화면을 엽니다. 실패 주문을 정리한 뒤 <span class="short-code">hoststop → hostrun</span>으로 다시 준비하세요. 준비 없이 화면만 열려면 <span class="short-code">hostrun --no-arm-prepare</span>를 사용하세요.</p>
         <p><strong>관제가 이미 켜져 있으면 중복 실행하지 않고 화면을 엽니다.</strong> 새로 실행한 터미널은 켜 두세요.</p>
+        <p>관제 종료: 다른 터미널에서 <span class="short-code">hoststop</span>. 관제 웹·ROS 연결·백엔드를 종료하며 로봇 서버 종료나 비상정지는 하지 않습니다. 초기 위치 준비 중이라면 실행 중인 터미널에서 Ctrl+C를 누르세요.</p>
         <p><strong>http://localhost:8082/control.html</strong>에서 <strong>Host · M1 · M2 · 자재창고(팔1) · 제작공정(팔2·3)</strong> 연결을 확인합니다. 1개 시험도 현재 관제에서는 다섯 장치의 Action 서버 연결이 필요합니다.</p>
         <p class="note">서비스의 <strong>active / running</strong>과 <strong>웹 관제 연결</strong>은 별개입니다. 연결되지 않으면 주문 시작을 보류하세요.</p>
         <p class="note">GitHub Pages는 안내·시뮬레이션용입니다. 실제 로봇 제어는 관제 PC의 위 로컬 주소에서 실행합니다.</p>
@@ -59,9 +65,20 @@
         <div class="browser-steps"><span>실제 자재에 맞는 A/B 선택</span><span>수량 <strong>1개</strong></span><span class="off">자동 진행 체크 해제</span><span>주문 시작</span></div>
         <p class="caution"><strong>‘주문 시작’을 누르면 M1의 창고 이동이 바로 시작됩니다.</strong> 각 동작이 끝나고 현장 상태를 확인한 뒤 ‘다음 단계’를 누르세요.</p>
         <p>M1 창고 도킹 → 팔1 자재 적재 → M1 제작공정 도킹 → 팔2 조립 → 팔3 완제품 적재 → M1 복귀</p>
-        <p class="success">완료 기준: <strong>6 / 6 단계</strong>, <strong>적재 완료 1</strong>, <strong>주문 완료</strong>. 연결 표시만으로 물리적인 준비 완료를 판단하지 않습니다.</p>
+        <p class="success">완료 기준: <strong>모든 단계 완료</strong>, <strong>적재 완료 1</strong>, <strong>주문 완료</strong>. 연결 표시만으로 물리적인 준비 완료를 판단하지 않습니다.</p>
       </section>
     </div>
+
+    <section class="step" id="failed-reset">
+      <div class="step-head"><h2>실패한 시험 초기화</h2><span class="where">관제 PC</span></div>
+      <div class="command"><pre><code>hostreset</code></pre><button class="copy" type="button" aria-label="실패 주문 초기화 명령 복사">복사</button></div>
+      <p>로봇·리니어의 정지와 작업 종료, 초기 배치·자재 상태를 확인한 뒤 <strong>초기화</strong>를 입력하세요. 웹의 <strong>실패 주문 초기화</strong> 버튼으로도 가능합니다.</p>
+      <p><strong>현재 위치에서 이어가려면:</strong> 관제의 <strong>실패 단계 재시도</strong>를 누르세요. 해당 단계 처음부터 다시 실행하며 기존 자동 진행 설정을 유지합니다. 자동 진행이 켜져 있으면 성공 후 다음 단계로 이어지고, 꺼져 있으면 <strong>다음 단계</strong> 버튼을 기다립니다. 일부 동작이 끝났다면 해당 단계의 시작 조건으로 자재와 위치를 복구한 뒤 사용하세요.</p>
+      <p><strong>로봇 제어 팝업:</strong> 관제 상단의 로봇 제어에서 M1·M2 상태와 목적지 버튼을 사용할 수 있습니다. 진행 중인 주문에서는 목적지 변경이 잠깁니다.</p><p><strong>M1·M2 위치 복구:</strong> 장치 카드에서 목적지를 선택하고 <strong>수동 이동</strong>을 누르세요. 주문 대기·완료 상태 또는 실패 주문의 작업 종료 후 사용할 수 있습니다. 이동 중에는 새 주문·추가 수동 이동·재시도가 잠깁니다. 주문 단계·수량은 바뀌지 않습니다. GO_TO 오류가 났다면 해당 로봇의 <strong>이동 오류 초기화</strong>를 누르세요. 실패 주문을 보관·초기화한 뒤 해당 로봇의 정지 잠금을 해제합니다. 현재 좌표와 적재물은 바뀌지 않으므로 초기 배치를 복구한 뒤 새 주문을 시작하세요. 오류 원인 해결이나 도킹 완료를 뜻하지 않습니다.</p>
+      <p>실패 기록을 보관하며, 필요한 정지 응답을 확인한 뒤 주문을 비웁니다. 이동·정지 잠금 해제·주차 좌표 설정은 하지 않습니다. 연결이 끊겼거나 진행 중인 주문은 초기화할 수 없습니다.</p>
+      <p><strong>로봇팔 정지·해제:</strong> 자재창고의 팔1 정지, 제작공정의 팔2·3 정지를 사용하세요. 정지 해제·재개는 중단 동작을 이어갈 수 있습니다. 제작공정 리니어는 이 정지 명령에 포함되지 않습니다. 오류 상태에서 거절되면 정지 완료로 간주하지 마세요.</p>
+      <p class="note">초기화 후 지정 주차 위치에서 <strong>hostready → hostrun</strong>. 첫 시험은 1개·자동 진행 해제로 시작하세요.</p>
+    </section>
 
     <section id="servers" class="anchor-target" aria-labelledby="servers-title">
       <h2 class="section-heading" id="servers-title">서버 켜기·끄기</h2>
@@ -76,10 +93,11 @@
       </div>
       <div class="step">
         <div class="step-head"><h3>M1·M2 서버 끄기</h3><span class="where">관제 PC</span></div>
+        <p class="note">아래 <strong>robot 계정과 192.0.2.101 / 192.0.2.102 주소는 예시</strong>입니다. 실제 로봇의 계정·IP로 바꿔 실행하세요.</p>
         <p class="caution"><strong>주문과 로봇 동작이 모두 끝나고 실제 정지를 확인한 뒤</strong> 실행하세요. 서버 종료는 비상정지가 아닙니다.</p>
         <div class="columns equal">
-          <div><span class="command-label">M1 제어 서버 종료</span><div class="command"><pre><code>ssh ubuntu@10.10.142.104 'systemctl --user stop m1-action.service'</code></pre><button class="copy" type="button" aria-label="M1 서버 종료 명령 복사">복사</button></div></div>
-          <div><span class="command-label">M2 제어 서버 종료</span><div class="command"><pre><code>ssh ubuntu@10.10.142.102 'systemctl --user stop m2-action.service'</code></pre><button class="copy" type="button" aria-label="M2 서버 종료 명령 복사">복사</button></div></div>
+          <div><span class="command-label">M1 제어 서버 종료</span><div class="command"><pre><code>ssh robot@192.0.2.101 'systemctl --user stop m1-action.service'</code></pre><button class="copy" type="button" aria-label="M1 서버 종료 명령 복사">복사</button></div></div>
+          <div><span class="command-label">M2 제어 서버 종료</span><div class="command"><pre><code>ssh robot@192.0.2.102 'systemctl --user stop m2-action.service'</code></pre><button class="copy" type="button" aria-label="M2 서버 종료 명령 복사">복사</button></div></div>
         </div>
         <p>종료 후 <span class="short-code">hostamr --status</span>에서 <strong>inactive / dead</strong>를 확인합니다. 위 명령은 Action 서버만 종료하며 센서·Nav2 서비스나 로봇 전원을 끄지는 않습니다.</p>
         <p>다시 켜려면 <span class="short-code">hostamr</span>를 실행하고, 실물 시험 전에 준비 결과와 관제 연결을 다시 확인하세요.</p>
@@ -91,6 +109,11 @@
       </div>
     </section>
 
+    <section class="step">
+      <h2>공정 자동 진행</h2>
+      <p>주문 시작 때 M1 이동과 리니어 조립 위치 준비를 함께 시작합니다. 이후 선행 작업이 완료되면 독립된 작업을 함께 시작합니다. M2 대기장소 이동과 팔1 적재, 팔2 조립과 M2 자재창고 이동, 팔3 적재와 조립 완료 로봇의 출발을 병렬로 실행합니다. 팔2·팔3는 BUILD_LOAD_A/B 연속 명령 한 번으로 실행합니다.</p>
+      <p>공용 통로의 이동로봇은 한 대씩 이동합니다. 다음 로봇은 앞 로봇의 출차와 팔3 적재가 모두 끝나야 조립대에 들어갑니다. 일시정지는 실행 중인 모든 작업 완료 후 적용됩니다. 실패 단계 재시도는 완료한 작업을 반복하지 않습니다.</p>
+    </section>
     <p class="bottom"><strong>정지가 필요하면:</strong> ‘단계 후 일시정지’는 현재 동작이 끝난 뒤 적용됩니다. M1·M2는 관제의 장치별 정지 버튼, 팔은 해당 제어기의 정지를 사용합니다. 팔2·3의 정지 명령은 이미 움직이는 리니어까지 멈추지는 않습니다.</p>
     <p class="bottom">팔1 서버 종료는 토크를 해제하므로 팔을 지지한 상태에서 종료하세요. 브라우저 닫기·서버 종료는 즉시 정지 명령이 아닙니다.</p>
     <p class="bottom">명령을 찾을 수 없다고 나오면 현재 터미널에서 <span class="short-code">source ~/.bashrc</span>를 한 번 실행하세요.</p>

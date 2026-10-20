@@ -1,7 +1,7 @@
-/* 실제 map 좌표를 기존 공정 개념도에 맞추는 보정값입니다. 실측 정밀도를 보장하지 않습니다.
- * 출처: 로컬 AMR commit 6e7b69d의 M1/M2/config/waypoints.yaml 및
- * M1/M2/config/nav2.yaml의 amcl.ros__parameters.initial_pose.
- * 로봇별 waypoint 좌표가 다르므로 각각 보정합니다. SVG 기준점은 engine.js WAYPOINTS입니다.
+/* M1/M2 로봇 적용 지도와 SHA256 일치 확인: 2026-10-19.
+ * 39 × 76 cells, 0.05 m/cell, origin [-0.328, -2.195, 0].
+ * factory_map.pgm SHA256: 7e1fb385deea9b8413880f6b6676706337666ae85ee24cd1e1cf417c39784a46
+ * 로봇·경유점은 동일 축척으로 표시하고 설비 그림은 기존 배치도 표시용입니다.
  */
 (function(root){
  'use strict';
@@ -10,6 +10,9 @@
   robotTopics:['burger1','burger2'],
   poseMaxAgeMs:3000,
   interpolationMs:200,
+  metric:{image:'assets/metric-map/factory-map.png',resolution:0.05,width:39,height:76,
+   origin:[-0.328,-2.195,0],pixelsPerMeter:480,
+   svgOrigin:[110,700],viewBox:[0,0,720,1120]},
   calibration:{
    aisleSvgX:340,
    homeSvgX:110,
@@ -21,7 +24,7 @@
       {x:0.42062385,y:-0.348328193,svgY:795},
       {x:0.42062385,y:-0.193328193,svgY:750},
       {x:0.42062385,y:0.036671807,svgY:700},
-      {x:0.46906513,y:0.320654172,svgY:500}
+      {x:0.46813,y:0.390648,svgY:500}
      ]
     },
     {
@@ -30,7 +33,7 @@
       {x:0.45062385,y:-0.368328193,svgY:795},
       {x:0.45062385,y:-0.208328193,svgY:750},
       {x:0.45062385,y:0.036671807,svgY:700},
-      {x:0.46906513,y:0.320654172,svgY:500}
+      {x:0.46813,y:0.390648,svgY:500}
      ]
     }
    ]

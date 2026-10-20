@@ -6,43 +6,24 @@ const {projectPose,parsePose}=require('../live-map-model.js');
 const close=(actual,expected,tolerance=1e-6)=>assert.ok(Math.abs(actual-expected)<=tolerance,`${actual} != ${expected}`);
 const closeHeading=(actual,expected)=>close((actual-expected+540)%360-180,0);
 
-// 각 로봇의 실제 waypoint가 공통 SVG 기준점에 정확히 놓여야 합니다.
+// Both robots use the same verified map. Distances and angles are not warped.
+const model=require('../live-map-model.js'),metric=config.metric;
+close(model.bounds.maxX-model.bounds.minX,1.95);
+close(model.bounds.maxY-model.bounds.minY,3.8);
 for(let index=0;index<2;index++){
- const robot=config.calibration.robots[index];
- for(const knot of robot.knots){
-  const point=projectPose({x:knot.x,y:knot.y,yaw:0},index);
-  close(point.position[0],340);close(point.position[1],knot.svgY);
+ for(const point of [config.calibration.robots[index].home,...config.calibration.robots[index].knots]){
+  const pose=projectPose({...point,yaw:0},index);
+  close(pose.position[0],metric.svgOrigin[0]+point.x*metric.pixelsPerMeter);
+  close(pose.position[1],metric.svgOrigin[1]-point.y*metric.pixelsPerMeter);
  }
- for(let i=0;i<robot.knots.length-1;i++){
-  const a=robot.knots[i],b=robot.knots[i+1];
-  const point=projectPose({x:(a.x+b.x)/2,y:(a.y+b.y)/2,yaw:0},index);
-  close(point.position[0],340);close(point.position[1],(a.svgY+b.svgY)/2);
- }
- for(const [a,b,direction] of [[robot.knots[0],robot.knots[1],-1],[robot.knots.at(-1),robot.knots.at(-2),1]]){
-  const y=a.y+direction*.1;
-  const point=projectPose({x:a.x,y,yaw:0},index);
-  close(point.position[0],340);
-  close(point.position[1],a.svgY+(y-a.y)*(b.svgY-a.svgY)/(b.y-a.y));
- }
- const home=projectPose(robot.home,index);
- close(home.position[0],110,index===0?1e-6:25);
- close(home.position[1],index===0?700:795,7);
+ const a=projectPose({x:0,y:0,yaw:0},index),x=projectPose({x:.5,y:0,yaw:0},index),y=projectPose({x:0,y:.5,yaw:0},index);
+ close(x.position[0]-a.position[0],metric.pixelsPerMeter*.5);close(a.position[1]-y.position[1],metric.pixelsPerMeter*.5);
 }
-assert.notEqual(config.calibration.robots[0].knots[0].y,config.calibration.robots[1].knots[0].y);
-
-// 직선 통로의 네 방향과 비등방/휘어진 통로 보정에서의 방향을 확인합니다.
-for(const [yaw,heading] of [[0,90],[Math.PI/2,0],[Math.PI,270],[-Math.PI/2,180]])
+for(const [yaw,heading] of [[0,90],[Math.PI/2,0],[Math.PI,270],[-Math.PI/2,180],[Math.PI/4,45]])
  closeHeading(projectPose({x:.42,y:-.1,yaw},0).heading,heading);
-const calibration=config.calibration;
-const scaleX=(340-110)/(calibration.robots[0].knots[2].x-calibration.robots[0].home.x);
-const scaleY=(700-750)/(.036671807-(-.193328193));
-const diagonal=projectPose({x:.42,y:-.1,yaw:Math.PI/4},0);
-closeHeading(diagonal.heading,Math.atan2(scaleX,-scaleY)*180/Math.PI);
-assert.ok(Math.abs(diagonal.heading-45)>10,'conceptual map distortion changes the rendered direction');
-const a=calibration.robots[0].knots[2],b=calibration.robots[0].knots[3];
-const north=projectPose({x:.45,y:.15,yaw:Math.PI/2},0);
-const dx=-(b.x-a.x)/(b.y-a.y)*scaleX,dy=(b.svgY-a.svgY)/(b.y-a.y);
-closeHeading(north.heading,Math.atan2(dx,-dy)*180/Math.PI);
+assert.deepEqual(projectPose({x:.5,y:.8,yaw:.7},0),projectPose({x:.5,y:.8,yaw:.7},1));
+close(projectPose({x:model.bounds.minX,y:model.bounds.maxY,yaw:0},0).position[0],metric.svgOrigin[0]+model.bounds.minX*metric.pixelsPerMeter);
+close(projectPose({x:model.bounds.minX,y:model.bounds.maxY,yaw:0},0).position[1],metric.svgOrigin[1]-model.bounds.maxY*metric.pixelsPerMeter);
 
 const now=1800000000500;
 function message(index=0,yaw=0){
@@ -60,6 +41,22 @@ for(let index=0;index<2;index++){
 }
 assert.ok(parsePose(message(),0,now+3000));
 assert.equal(parsePose(message(),0,now+3001),null);
+const retained=parsePose(message(),0,now+600000,{allowStale:true});
+assert.equal(retained.stamp,now,'retained positions keep their actual old timestamp');
+// Docking beyond the old waypoint span remains visible on the metric map.
+const dockMessage=message();
+dockMessage.pose.pose.position={x:.45969099,y:.85449041,z:0};
+const dockPose=parsePose(dockMessage,0,now+40000,{allowStale:true});
+assert.equal(dockPose.withinMap,true);
+close(dockPose.world.x,.45969099);close(dockPose.world.y,.85449041);
+assert.equal(dockPose.stamp,now);
+for(let index=0;index<2;index++){
+ for(const [x,y,inside] of [[model.bounds.minX,model.bounds.minY,true],[model.bounds.maxX,model.bounds.maxY,true],
+  [model.bounds.minX-.001,0,false],[model.bounds.maxX+.001,0,false],[0,model.bounds.minY-.001,false],[0,model.bounds.maxY+.001,false]]){
+  const m=message(index);m.pose.pose.position={x,y};assert.equal(parsePose(m,index,now).withinMap,inside);
+ }
+}
+assert.equal(parsePose(message(),0,now-1001,{allowStale:true}),null,'retained mode still rejects future timestamps');
 assert.ok(parsePose(message(),0,now-1000));
 assert.equal(parsePose(message(),0,now-1001),null);
 for(const invalid of [null,{},'pose',{header:{}},{header:{frame_id:'map',stamp:{sec:0,nanosec:0}}}])
@@ -87,4 +84,4 @@ for(const file of ['live-map-config.js','live-map-model.js'])
  vm.runInContext(fs.readFileSync(require.resolve('../'+file),'utf8'),browser);
 const browserPose=browser.LiveMapModel.parsePose(message(),0,now);
 assert.deepEqual(JSON.parse(JSON.stringify(browserPose)),parsePose(message(),0,now));
-console.log('PASS: per-robot waypoint/home calibration, extrapolation, projected heading, pose freshness/validation and browser exports.');
+console.log('PASS: metric map bounds, equal scale, docking visibility, undistorted heading, pose freshness/validation and browser exports.');

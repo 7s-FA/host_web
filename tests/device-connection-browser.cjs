@@ -4,6 +4,7 @@ const {pathToFileURL}=require('node:url');
 const {resolve}=require('node:path');
 
 (async()=>{
+ const discoveryTimers=[];
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH,args:['--no-sandbox']});
  try{
   const base=process.env.TEST_BASE_URL||'http://127.0.0.1:8082';
@@ -19,6 +20,7 @@ const {resolve}=require('node:path');
    page.setDefaultTimeout(10000);
    page.on('pageerror',error=>errors.push(error.message));
    await page.addInitScript(()=>{const original=Date.now;window.testClockOffset=0;Date.now=()=>original()+window.testClockOffset;});
+   if(path==='/control.html')await page.route('**/*embedded=1',route=>route.fulfill({contentType:'text/html',body:'<html></html>'}));
    await page.route('**/api/live/**',route=>route.fulfill({json:reportedState}));
    await page.routeWebSocket(/.*/,socket=>{
     const traffic=[];
@@ -26,9 +28,9 @@ const {resolve}=require('node:path');
      const msg=JSON.parse(raw);messages.push(msg);traffic.push(msg);
      if(!String(msg.id||'').startsWith('device-connection-'))return;
      if(!connections.some(item=>item.socket===socket))connections.push({socket,traffic});
-     if(msg.op==='call_service'&&msg.service==='/rosapi/publishers'&&answers.has(msg.args.topic)){
-      socket.send(JSON.stringify({op:'service_response',id:msg.id,service:msg.service,result:true,
-       values:{publishers:answers.get(msg.args.topic)?['/test_device_server']:[]}}));
+     if(msg.op==='subscribe'&&msg.topic==='/host/device_discovery'){
+      const publish=()=>{if(!answers.size)return;try{socket.send(JSON.stringify({op:'publish',topic:'/host/device_discovery',msg:{data:JSON.stringify({protocol:1,stamp_ms:Date.now(),publishers:Object.fromEntries([...answers].map(([topic,present])=>[topic.split('/')[1],present?['/test_device_server']:[]]))})}}));}catch(_){}};
+      discoveryTimers.push(setInterval(publish,250));
      }
     });
    });
@@ -74,8 +76,7 @@ const {resolve}=require('node:path');
    assert.equal(connections.length,2,'Closed connection reconnects');
    for(const key of keys)assert((await states(key)).every(value=>value!=='online'),'Reconnection cannot revive old green lights');
    for(const item of connections){
-    assert(item.traffic.every(msg=>msg.op==='subscribe'||msg.op==='call_service'),'Connection monitor never publishes commands');
-    assert(item.traffic.filter(msg=>msg.op==='call_service').every(msg=>msg.service==='/rosapi/publishers'&&Object.values(topics).includes(msg.args.topic)));
+    assert(item.traffic.every(msg=>msg.op==='subscribe'),'Connection monitor never sends commands or service polls');
    }
    assert(messages.every(msg=>msg.op!=='send_action_goal'),'Viewing connection lights never sends robot Actions');
    assert.deepEqual(errors,[]);await page.close();
@@ -92,5 +93,5 @@ const {resolve}=require('node:path');
    assert.equal(connections,0,'Public and file pages must not open ROS sockets');await page.close();
   }
   console.log('PASS connection lights: three pages, independent server discovery, production aggregation, fresh Host data, stale/blocked/disconnected/reconnected states, command-free monitoring, public/file gating and responsive layout.');
- }finally{await browser.close();}
+ }finally{for(const timer of discoveryTimers)clearInterval(timer);await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

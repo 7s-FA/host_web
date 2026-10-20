@@ -4,15 +4,17 @@
  document.addEventListener('DOMContentLoaded',()=>{
   const buttons=[...document.querySelectorAll('[data-stop-robot]')];
   const restarts=[...document.querySelectorAll('[data-restart-robot]')];
+  const errorResets=[...document.querySelectorAll('[data-error-reset-robot]')];
   if(!buttons.length)return;
   const statuses=[...document.querySelectorAll('[data-stop-status]')];
   const local=location.protocol==='http:'&&['localhost','127.0.0.1'].includes(location.hostname);
   if(!local){
-   for(const button of [...buttons,...restarts])button.disabled=true;
+   for(const button of [...buttons,...restarts,...errorResets])button.disabled=true;
    for(const status of statuses)status.textContent='Host PC의 로컬 화면에서 사용';
    return;
   }
   function paint(state){
+   window.dispatchEvent(new CustomEvent('robot-controls-state',{detail:state}));
    for(const button of buttons){
     const robot=state.robots[button.dataset.stopRobot];
     const pending=robot.phase==='pending'&&robot.command==='EMER_STOP';
@@ -35,6 +37,7 @@
   const client=RobotStopClient.create({url:'ws://'+location.hostname+':9090',onChange:paint});
   for(const button of buttons)button.addEventListener('click',()=>client.requestStop(button.dataset.stopRobot));
   for(const button of restarts)button.addEventListener('click',()=>client.requestRestart(button.dataset.restartRobot));
+  window.RobotStopControls={snapshot:client.snapshot,release:client.requestRestartResult};
   paint(client.snapshot());client.start();
   window.addEventListener('pagehide',()=>client.close());
   window.addEventListener('pageshow',event=>{if(event.persisted)client.start();});

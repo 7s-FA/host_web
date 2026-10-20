@@ -47,3 +47,24 @@ main{max-width:1920px;padding:12px 20px 0}.heading{min-height:44px;margin-bottom
 .robot-battery-control{flex-basis:100%;min-width:0;display:grid;gap:3px}.robot-battery-control>span{font-size:10px;color:#607380}.robot-battery{margin:0;font-size:11px;line-height:1.4;color:#738591;overflow-wrap:anywhere}.robot-battery[data-state=fresh]{color:#21704c;font-weight:650}.robot-battery[data-low=true]{color:#aa6a18}.robot-battery[data-state=stale],.robot-battery[data-state=offline]{color:#738591;font-weight:400}
 
 .robot-stop-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.robot-stop-buttons button{padding:7px 3px;font-size:11px;line-height:1.4;word-break:keep-all}.robot-restart-button{width:100%;border:1px solid #8caab4;border-radius:6px;background:#f3f8fa;color:#315f70;font-weight:750}.robot-restart-button:hover:not(:disabled){background:#e4f0f4}.robot-restart-button:focus-visible{outline:3px solid #8db5c6;outline-offset:2px}
+
+/* The embedded map fills its parent viewport without growing the control page. */
+.live-map-embedded{height:100dvh;min-height:0;overflow:hidden;background:#fff}
+.live-map-embedded>.topbar,.live-map-embedded footer,
+.live-map-embedded main>.heading,.live-map-embedded .host-console,
+.live-map-embedded .current-stage,.live-map-embedded .devices,
+.live-map-embedded .map-panel>.panel-heading{display:none}
+.live-map-embedded main{display:block;width:100%;height:100%;max-width:none;padding:0;margin:0;min-height:0}
+.live-map-embedded #simulation-view,.live-map-embedded .simulation-layout,
+.live-map-embedded .simulation-main{display:block;height:100%;min-height:0;overflow:hidden;margin:0}
+.live-map-embedded .map-panel{display:flex;flex-direction:column;height:100%;min-height:0;overflow:hidden;border:0;box-shadow:none;border-radius:0;margin:0}
+.live-map-embedded .map-stage-layout{display:block;flex:1;border:0;min-height:0;overflow:hidden}
+.live-map-embedded .map-stage-layout>.map-wrapper{height:100%;min-height:0;border:0;background:#f1f3f2}
+.live-map-embedded .simulation-main #factory-map{display:block;width:100%;height:100%;max-height:100%;min-height:0;aspect-ratio:auto;object-fit:contain}
+.live-map-summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;padding:0 0 7px;flex:none}
+.live-map-summary p{grid-column:span 2;margin:0;padding:5px 6px;border-radius:5px;background:#f0f3f5;color:#6e7d87;font-size:10px;line-height:1.4;overflow-wrap:anywhere}
+.live-map-summary p:nth-child(-n+2){grid-column:span 3}
+.live-map-summary p[data-fresh=true]{background:#e8f4ed;color:#276f4a}
+
+.metric-map-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:6px 8px;font-size:11px;color:#526c7b;flex:none}.metric-map-toolbar button{font:inherit;border:1px solid #cbd5df;border-radius:5px;padding:5px 8px;background:white;cursor:pointer}.live-map-mode #factory-map{aspect-ratio:720/1120}.live-map-mode #metric-map-layer text{pointer-events:none}
+.live-map-mode .simulation-main .map-panel{grid-template-rows:42px auto minmax(0,1fr)}

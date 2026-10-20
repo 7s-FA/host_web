@@ -1,6 +1,6 @@
 # 로봇 제어 패널
 
-메인 `index.html`의 단일 버튼으로 같은 사이트 안에 열린다. 기존 공정 UI/백엔드/API는 유지한다. `bash start_host.sh` 실행 시 사용하는 8082 사이트와 개발 미리보기에서 같은 정적 파일을 사용한다.
+메인 `index.html`과 실물 관제 `control.html`의 로봇 제어 버튼으로 같은 사이트 안에 열린다. 관제에서 열면 진행 중인 주문의 목적지 변경을 막고, 실패 주문의 수동 이동은 Host 복구 API를 사용한다. 기존 공정 UI/백엔드/API는 유지한다. `bash start_host.sh` 실행 시 사용하는 8082 사이트와 개발 미리보기에서 같은 정적 파일을 사용한다.
 
 - 영상은 받지 않는다. 카메라는 로봇 안의 도킹 비전 전용이다(로봇 docking.yaml `vision.preview_enabled: false`, 8085 영상 서버 없음).
 - 작은 상태/Action: 같은 PC의 rosbridge 9090. `/M1/data`와 `/M2/data`를 각각 사용한다.
