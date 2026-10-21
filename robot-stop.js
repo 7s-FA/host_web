@@ -23,7 +23,7 @@
    }
    for(const button of restarts){
     const robot=state.robots[button.dataset.restartRobot];
-    button.disabled=!robot.canRestart;
+    button.disabled=!robot.canRestart||!!window.hostInitialPreparationBusy;
     button.textContent=button.dataset.restartRobot+(robot.phase==='pending'&&robot.command==='RESTART'?' 해제 요청 중':' 정지 해제');
     button.title=robot.canRestart?'정지 잠금 해제 · 이전 이동을 재개하지 않습니다.':'최신 로봇 상태 수신 및 진행 중 작업 종료 후 사용할 수 있습니다.';
    }
@@ -36,7 +36,7 @@
   }
   const client=RobotStopClient.create({url:'ws://'+location.hostname+':9090',onChange:paint});
   for(const button of buttons)button.addEventListener('click',()=>client.requestStop(button.dataset.stopRobot));
-  for(const button of restarts)button.addEventListener('click',()=>client.requestRestart(button.dataset.restartRobot));
+  for(const button of restarts)button.addEventListener('click',()=>{if(!window.hostInitialPreparationBusy)client.requestRestart(button.dataset.restartRobot);});
   window.RobotStopControls={snapshot:client.snapshot,release:client.requestRestartResult};
   paint(client.snapshot());client.start();
   window.addEventListener('pagehide',()=>client.close());

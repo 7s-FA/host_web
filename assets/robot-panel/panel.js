@@ -1,15 +1,16 @@
 (()=>{'use strict';
-const configs=[{robot:'burger1',action:'/M1/data',id:'M1'},{robot:'burger2',action:'/M2/data',id:'M2'}];
+const configs=[{robot:'burger1',action:'/M1/data',ip:'192.0.2.104',id:'M1'},{robot:'burger2',action:'/M2/data',ip:'192.0.2.102',id:'M2'}];
 const routes=[['GO_TO_MAT','재료창고'],['GO_TO_ASM','조립대'],['GO_TO_REST','REST'],['GO_TO_PARK','지정 주차장']];
 const states=new Map();let ws,reconnect,closed=false,host=null,hostAt=0;
 const hostControl=new URLSearchParams(location.search).get('host_control')==='1';
-const hostAllowsMove=()=>!hostControl||(host?.bridge_connected&&Date.now()-hostAt<3500&&!host.pending_commands&&!host.reset_pending&&!host.manual_move&&(!host.order||['idle','done'].includes(host.order.status)||host.can_manual_move));
+const fullResetBusy=()=>host?.full_reset?.status==='running'||host?.full_reset?.uncertain;
+const hostAllowsMove=()=>!hostControl||(host?.bridge_connected&&Date.now()-hostAt<3500&&!fullResetBusy()&&!host.pending_commands&&!host.reset_pending&&!host.manual_move&&(!host.order||['idle','done'].includes(host.order.status)||host.can_manual_move));
 async function refreshHost(){if(!hostControl)return;try{const r=await fetch('/api/live/state',{cache:'no-store'});if(!r.ok)throw Error();host=await r.json();hostAt=Date.now();}catch{host=null;}for(const s of states.values())render(s);}
 const el=(p,s)=>p.querySelector(s),connected=()=>ws?.readyState===WebSocket.OPEN;
 function note(s,text){const row=document.createElement('li');row.textContent=new Date().toLocaleTimeString('ko-KR')+' · '+text;s.log.append(row);while(s.log.children.length>50)s.log.firstChild.remove();s.log.scrollTop=s.log.scrollHeight;}
 function render(s){const fresh=connected()&&Date.now()-s.ownerAt<3500,running=s.mission?.status==='running',pending=!!s.pending;
  el(s.card,'.pill').textContent=!fresh?'상태 수신 대기':running?'작업 중':pending?'명령 응답 대기':'연결됨';
- s.card.querySelectorAll('[data-command]').forEach(b=>{b.disabled=b.dataset.command==='EMER_STOP'?!connected():b.dataset.command==='RESTART'?!fresh||running||pending:!fresh||!!s.owner.error||running||pending||!hostAllowsMove();});
+ s.card.querySelectorAll('[data-command]').forEach(b=>{b.disabled=b.dataset.command==='EMER_STOP'?!connected():b.dataset.command==='RESTART'?!fresh||running||pending||hostControl&&fullResetBusy():!fresh||!!s.owner.error||running||pending||!hostAllowsMove();});
  if(hostControl&&!hostAllowsMove())el(s.card,'.notice').textContent='주문 진행 중이거나 Host 상태 확인 필요 · 목적지 변경 잠김';
  const values={mission:s.mission?`${s.mission.destination||'—'} / ${s.mission.stage||s.mission.status}${s.mission.status==='running'?'':' (최근 기록)'}`:'대기',owner:fresh?s.owner.mode:'수신 끊김',dock:Date.now()-s.dockAt<3500?s.dock.state:'도킹 비활성',ir:Date.now()-s.irAt<2000?(s.ir?'감지':'미감지'):'도킹·REST 중 수신',velocity:Date.now()-s.odomAt<2000&&s.odom?`${s.odom.twist.twist.linear.x.toFixed(3)} m/s · ${s.odom.twist.twist.angular.z.toFixed(3)} rad/s`:'—',error:s.mission?.error||s.owner.error||s.dock?.reason||'—'};
  for(const [key,value]of Object.entries(values))el(s.card,'[data-value="'+key+'"]').textContent=value;

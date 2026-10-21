@@ -127,8 +127,13 @@
 .manual-move-control button{font-weight:700;cursor:pointer}.manual-move-control :disabled{opacity:.5;cursor:not-allowed}.manual-move-control p{grid-column:1/-1;margin:0}
 #recovery-dialog{width:min(560px,calc(100vw - 32px));box-sizing:border-box;border:0;border-radius:16px;padding:24px;color:#172b4d;line-height:1.65}
 #recovery-dialog::backdrop{background:#172b4d88}#recovery-dialog label{display:block;padding:12px;background:#f1f5f9;border-radius:8px}#recovery-dialog-note{color:#a23b21}
+#parked-dialog{width:min(560px,calc(100vw - 32px));box-sizing:border-box;border:0;border-radius:16px;padding:24px;color:#172b4d;line-height:1.65}
+#parked-dialog::backdrop{background:#172b4d88}#parked-dialog label{display:block;padding:12px;background:#f1f5f9;border-radius:8px}
+[data-parked-robot]{width:100%;margin-top:8px;padding:9px 5px;border:1px solid #8caab4;border-radius:6px;background:#f3f8fa;color:#315f70;font-size:11px}
 .order-tools{flex-wrap:wrap}
 
 .robot-error-reset-button{width:100%;padding:7px 5px;border:1px solid #b4a47c;border-radius:6px;background:#fff9eb;color:#806021;font-size:11px;font-weight:700;cursor:pointer}.robot-error-reset-button:hover:not(:disabled){background:#fff0cc}.robot-error-reset-button:disabled{opacity:.45;cursor:not-allowed}
 
 .robot-panel-dialog{width:min(1200px,96vw);height:92dvh;max-height:96dvh;padding:0;border:0;border-radius:12px;overflow:hidden}.robot-panel-dialog::backdrop{background:#142c42a6}.robot-panel-dialog>button{position:absolute;right:14px;top:10px;z-index:2;border:1px solid #ccd8df;border-radius:8px;padding:7px 14px;background:#fff;cursor:pointer}.robot-panel-dialog iframe{width:100%;height:100%;border:0}.cell-control{border-top:1px solid #d6e0e6;margin-top:12px;padding-top:8px}.cell-control p{font-size:10px;line-height:1.5;margin:5px 0}.cell-control button{font-size:11px;padding:7px 4px}.cell-control .cell-controls{display:grid;grid-template-columns:1fr 1fr;gap:5px}.cell-control .cell-stop{color:#a63131;border:1px solid #bd5353;background:#fff7f7}.cell-control .cell-release{color:#315f70;border:1px solid #8caab4;background:#f3f8fa}.cell-control [data-phase=error]{color:#a63131}.cell-control [data-phase=success]{color:#21704c}
+
+#full-reset-dialog{max-width:560px;border:1px solid #cbd5e1;border-radius:16px;padding:28px}#full-reset-dialog::backdrop{background:#10203088}#full-reset-dialog p{line-height:1.65}#full-reset-dialog label{display:block;line-height:1.6}.full-reset-status{margin-bottom:16px;border-left:4px solid #d79524}.full-reset-status[hidden]{display:none}

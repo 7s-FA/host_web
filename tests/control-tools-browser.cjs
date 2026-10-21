@@ -39,6 +39,14 @@ try{
   // Feed panel owner status and verify Host interlock when an order starts.
   for(const ws of sockets)for(let i=1;i<=2;i++)try{publish(ws,`/burger${i}/motion_owner/communication_status`,{mode:'idle',error:null});}catch{}
   await frame.locator('[data-command="GO_TO_MAT"]').first().waitFor();
+  state={...state,order:null,full_reset:{id:'initializing',status:'running',step:6,total:9,label:'리니어 바깥쪽',uncertain:false},can_start:false,can_manual_move:false};
+  await page.waitForTimeout(1200);
+  assert(await frame.locator('[data-command="GO_TO_MAT"]').first().isDisabled());
+  assert(await frame.locator('[data-command="RESTART"]').first().isDisabled());
+  assert(!(await frame.locator('[data-command="EMER_STOP"]').first().isDisabled()));
+  assert(await page.locator('[data-cell-error-reset="production"]').isDisabled());
+  assert(await page.locator('[data-restart-robot="M1"]').isDisabled());
+  state={...state,full_reset:null};
   state={...state,order:{id:'new-order',status:'running',stage:0,stage_count:14,product_type:'B',quantity:2},can_start:false,can_manual_move:false};
   await page.waitForTimeout(1200);assert(await frame.locator('[data-command="GO_TO_MAT"]').first().isDisabled());
   await page.screenshot({path:'/tmp/control-robot-popup.png',fullPage:true});await page.keyboard.press('Escape');await page.locator('#robot-panel-dialog').waitFor({state:'hidden'});

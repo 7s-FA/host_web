@@ -2,8 +2,8 @@
 (()=>{
  'use strict';
  const local=location.protocol==='http:'&&['localhost','127.0.0.1'].includes(location.hostname);
- const cells=[{key:'warehouse',arm:'arm1',title:'팔1',note:'해제 시 중단 동작 재개 · 주문 상태는 별도 확인'},
-  {key:'production',arm:'arm2',title:'팔2·3',note:'팔2·3 공동 제어 · 리니어는 이 정지에 포함되지 않음'}];
+ const cells=[{key:'warehouse',arm:'arm1',title:'팔1',note:'재개 시 중단된 동작이 이어집니다.'},
+  {key:'production',arm:'arm2',title:'팔2·3',note:'팔2·3 공동 정지 · 리니어 제외'}];
  let socket=null,connected=false,reconnect=null,closed=false,serial=0,arm1=null,arm1At=0,hostState=null,resetBusy=false,hostPolling=false;
  const requests=new Map(),prefix='cell-'+(crypto.randomUUID?.()||Date.now());
  for(const c of cells){
@@ -18,7 +18,7 @@
   {
    c.clear=document.createElement('button');c.clear.type='button';c.clear.className='robot-error-reset-button';
    c.label=c.key==='warehouse'?'자재창고':'조립대';
-   c.clear.dataset.cellErrorReset=c.key;c.clear.textContent=c.label+' 오류 초기화';c.clear.disabled=true;
+   c.clear.dataset.cellErrorReset=c.key;c.clear.textContent='오류 초기화';c.clear.setAttribute('aria-label',c.label+' 오류 초기화');c.clear.disabled=true;
    c.clear.title='멈춘 '+c.title+' 작업과 실패 주문 정리 · 원점 복귀·자동 재개 없음';box.append(c.clear);
    c.clear.onclick=async()=>{
     if(c.clear.disabled||!confirm('모든 로봇·팔·리니어가 멈추고 초기 배치와 자재 상태를 확인했습니까? '+c.label+'의 남은 작업과 실패 주문을 정리합니다. 팔 원점 복귀·공정 재개·M1/M2 잠금 해제는 하지 않습니다.'))return;
@@ -38,8 +38,9 @@
   if(!c.stop)continue;
   c.stop.disabled=!fresh(c)||c.pending?.command==='EMER_STOP';
   const paused=c.key==='warehouse'?arm1?.state==='PAUSED'&&Date.now()-arm1At<3500:c.paused;
-  c.release.disabled=!fresh(c)||!!c.pending||!paused||resetBusy;
-  if(c.clear)c.clear.disabled=!fresh(c)||!!c.pending||resetBusy||!hostState?.bridge_connected||hostState.pending_commands>0||!!hostState.manual_move||!!hostState.order&&hostState.order.status!=='failed'||c.key==='warehouse'&&(!arm1?.supports_error_reset||Date.now()-arm1At>=3500||!['IDLE','PAUSED','ERROR'].includes(arm1.state));
+  const fullResetBusy=hostState?.full_reset?.status==='running'||hostState?.full_reset?.uncertain;
+  c.release.disabled=!fresh(c)||!!c.pending||!paused||resetBusy||fullResetBusy;
+  if(c.clear)c.clear.disabled=!fresh(c)||!!c.pending||resetBusy||fullResetBusy||!hostState?.bridge_connected||hostState.pending_commands>0||!!hostState.manual_move||!!hostState.order&&hostState.order.status!=='failed'||c.key==='warehouse'&&(!arm1?.supports_error_reset||Date.now()-arm1At>=3500||!['IDLE','PAUSED','ERROR'].includes(arm1.state));
   c.stop.textContent=c.title+(c.pending?.command==='EMER_STOP'?' 정지 확인 중':' 정지');
   c.release.textContent=c.pending?.command==='RESTART'?'해제 응답 대기':'정지 해제·재개';
   c.status.dataset.phase=c.phase;
@@ -51,7 +52,7 @@
   c.paused=success&&r.command==='EMER_STOP';paint();r.resolve?.({success,message});
  }
  function issue(c,command){
-  paint();if(command==='CLEAR_ERROR'){if(!fresh(c)||c.pending)return Promise.resolve({success:false,message:'연결 또는 다른 요청 확인 필요'});}
+  paint();if(command==='CLEAR_ERROR'){if(!fresh(c)||c.pending||hostState?.full_reset?.status==='running'||hostState?.full_reset?.uncertain)return Promise.resolve({success:false,message:'연결 또는 다른 요청 확인 필요'});}
   else if((command==='EMER_STOP'?c.stop:c.release).disabled)return;
   if(c.pending)finish(c.pending.id,false,'정지 요청 우선 · 이전 해제 결과 미확인');
   const id=prefix+'-'+(++serial),action='/'+c.arm+'/data',label=command==='EMER_STOP'?'정지':command==='CLEAR_ERROR'?'오류 초기화':'정지 해제';

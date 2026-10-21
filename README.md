@@ -1,3 +1,25 @@
+# host_total · 웹 관제 통합 변경 (2026-10-21)
+
+이 브랜치는 현장 관제 화면의 미커밋 변경을 모은 공유용 버전입니다. `main`과 GitHub Pages 배포 설정은 변경하지 않았습니다. 내부 IP·SSH 계정·사용자 홈 경로는 예시입니다.
+
+## 추가·수정
+
+- 전체 초기화 진행/실패 표시, M1·M2 오류 초기화와 직접 주차 위치로 옮긴 뒤 재준비.
+- 수동 점검 모드: 선택한 이동로봇의 연결 상태로 개별 이동 버튼을 판단. 전체 공정 시작·전체 초기화는 차단하고 진행 중 작업/응답 미확인 보호는 유지.
+- 병렬 공정·실패 단계 복구·장치별 로그와 실제 위치/배터리 표시를 관제 API에 연결.
+- 지도와 장치 제어를 2열로 배치하고 정지·이동 버튼을 강조. 주문과 복구 메뉴를 접을 수 있게 하고 중복 설명을 줄임.
+- 자재창고·조립대 정지/재개·오류 초기화 버튼, 사용방법 팝업 갱신.
+
+## 함께 설치
+
+형제 `host_backend`의 **host_total** 브랜치와 사용합니다. 통합 실행기·설정·별칭 예시는 [host_backend 설치 안내](https://github.com/7s-FA/host_backend/tree/host_total/deployment/host)에 있습니다. 공개 GitHub Pages에서는 로컬 로봇을 제어할 수 없습니다. 통합 서버를 실행한 PC의 `http://localhost:8082/control.html`을 사용하세요.
+
+## 검증 범위
+
+HTTP 관제 단위 테스트와 JavaScript 문법, 실제 브라우저 배치·접기 메뉴를 확인합니다. UI 확인 과정에서 로봇 이동 명령은 보내지 않았습니다. 전체 초기화는 실물 이동을 포함하므로 현장 정지·공간 확인 후 사용합니다.
+
+---
+
 # Robot3 공정 시뮬레이션
 
 A제품 또는 B제품 1~2개의 주문 → 부품 적재 → 운반 → 티칭 조립 → 파렛트 적재 → 복귀를 웹에서 재생합니다. 기본 공정 지도는 시뮬레이션이며, **실물 상태 보기**에서는 ROS로 받은 위치와 장치 상태를 표시합니다. 별도의 **로봇 제어** 패널은 Host PC의 rosbridge와 준비된 M1·M2에 연결해 실제 이동을 요청합니다. 메인 화면과 Host 관제에서도 M1·M2의 **정지·정지 해제**를 요청하고 배터리를 확인할 수 있습니다. 전체 공정은 형제 `host_backend`와 연결한 `control.html`에서 제어합니다.
@@ -14,9 +36,9 @@ A제품 또는 B제품 1~2개의 주문 → 부품 적재 → 운반 → 티칭 
 `final_project/host_web`과 `final_project/host_backend`를 함께 둔 관제 PC에서는 최상위 공통 실행기를 사용합니다. 현재 PC에서 웹(8082)·rosbridge(9090)·rosapi·기존 관제 백엔드를 한 번에 실행하려면:
 
 ```bash
-bash $HOME/final_project/start_host.sh
+bash /home/operator/final_project/start_host.sh
 # 노드를 실행하지 않는 점검
-bash $HOME/final_project/start_host.sh --check
+bash /home/operator/final_project/start_host.sh --check
 ```
 
 공통 설정은 `../config/host.env`, 빌드·로그는 `../.runtime/host/`입니다. 현재 폴더의 `bash start_host.sh`는 기존 의미대로 **웹·rosbridge·rosapi만** 실행합니다. 상세 사용법과 모의 검증 절차은 [관제 PC 안내](../README.md)를 확인하세요.
@@ -219,3 +241,7 @@ A·B제품은 같은 설명용 이동 경로와 공정 시간을 사용합니다
 M2는 기존 공정 스케줄을 유지합니다. M1의 자재창고 도착 시 초기위치에서 출차해 WP4를 거쳐 대기장소로 갑니다. 앞 이동 로봇의 제작공정 진입 후 대기장소에서 10cm 후진·180° 회전 → WP2 → ArUco 정렬·전진 → 후방 IR 정지 순으로 자재창고에 진입합니다. 대기장소에는 ArUco 마커가 없으며 전진 진입 후 IR로 정지합니다.
 
 이 단계는 이동 로봇 내부 상태와 진행 피드백입니다. Host는 목적지 이동을 지시하고, 이동 로봇이 Nav2·카메라·IR 동작을 처리합니다. 중간 웨이포인트마다 Host 승인을 기다리지 않으며 최종 IR 정지 뒤 도착 완료로 처리합니다. 시뮬레이션 이벤트의 `navigation_start` / `navigation_done`은 단계 코드와 제어 방식 확인용이며 실제 ROS2 메시지를 송수신하는 구현은 아닙니다. 코드: `engine.js`의 `navigationFor()` / `navigationState()`.
+
+## 게시 전 확인
+
+호스트/웹 모의·HTTP 테스트 합계 146개 통과. UI 확인은 실물 이동 없이 진행.

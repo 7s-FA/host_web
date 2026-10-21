@@ -24,7 +24,7 @@
     <p class="eyebrow">HOST PC · QUICK START</p>
     <h1>실물 테스트 <span>사용방법</span></h1>
     <p class="intro">매일 쓰는 실행·종료 순서입니다. 명령은 관제 PC 터미널에서 실행하세요.</p>
-    <p class="scope-note">이 안내의 <strong>hostamr · hostrun</strong>는 이 관제 PC의 <strong>$HOME/final_project</strong>에 설정한 명령입니다.</p>
+    <p class="scope-note">이 안내의 <strong>hostamr · hostrun</strong>는 이 관제 PC의 <strong>/home/operator/final_project</strong>에 설정한 명령입니다.</p>
     <nav class="guide-nav" aria-label="사용방법 바로가기"><a href="#first-start">처음 실행</a><a href="#servers">서버 켜기·끄기</a></nav>
     <div class="flow" aria-label="준비 순서"><span>전원·배치</span><b>→</b><span>M1·M2 준비</span><b>→</b><span>관제 실행</span><b>→</b><span>1개 수동 시험</span></div>
 
@@ -49,9 +49,10 @@
       <section class="step">
         <div class="step-head"><span class="number">03</span><h2>관제 실행과 연결 확인</h2><span class="where">관제 PC 터미널</span></div>
         <div class="command"><pre><code>hostrun</code></pre><button class="copy" type="button" aria-label="관제 실행 명령 복사">복사</button></div>
-        <p><strong>새 실물 관제 실행 시:</strong> 서버 확인 → 팔의 중단 작업 정리·M1/M2 정지 잠금 해제 → 팔1 A 시작 자세 → 팔2·3 저장 안전 자세 → 리니어 수축 위치 → 웹화면 순서로 준비합니다. 준비 이동 전 작업 공간과 적재물을 확인하세요.</p>
-        <p class="note">진행 중인 작업이나 정지 미확인 상태에서는 준비를 중단합니다. 이전 이동을 재개하거나 주차 좌표를 재설정하지 않습니다. 리니어는 기존 두 위치 중 뒤로 들어간 위치를 사용합니다.</p>
-        <p class="note">미정리 주문이 있으면 잠금 해제·이동 준비를 생략하고 복구 화면을 엽니다. 실패 주문을 정리한 뒤 <span class="short-code">hoststop → hostrun</span>으로 다시 준비하세요. 준비 없이 화면만 열려면 <span class="short-code">hostrun --no-arm-prepare</span>를 사용하세요.</p>
+        <p><strong>새 실물 관제 실행 시:</strong> 서버 확인 → 팔의 중단 작업 정리·M1/M2 정지 잠금 해제 → 팔1 A 시작 자세 → 팔2·3 저장 안전 자세 → 리니어 바깥쪽 초기 위치 → M1 주차 → M2 주차 → 웹화면 순서로 준비합니다. 준비 이동 전 작업 공간과 적재물을 확인하세요.</p>
+        <p class="note">진행 중인 작업이나 정지 미확인 상태에서는 준비를 중단합니다. 이전 이동을 재개하거나 주차 좌표를 재설정하지 않습니다. 리니어는 기존 두 위치 중 밖으로 나온 위치를 사용합니다.</p>
+        <p class="note">미정리 주문이 있으면 잠금 해제·이동 준비를 생략하고 복구 화면을 엽니다. 작업 종료를 확인한 뒤 웹의 <strong>전체 초기화</strong>로 다시 준비할 수 있습니다.</p>
+        <p><strong>수동 점검: <span class="short-code">hostmanual</span></strong> — 다른 장치가 준비되지 않아도 초기 자세·리니어·주차 준비를 생략하고 웹을 엽니다. <span class="short-code">hostrun --manual</span>과 같습니다. 수동 점검 모드에서는 전체 공정 시작·전체 초기화를 실행하지 않습니다. 연결된 M1·M2는 상단 <strong>로봇 제어</strong>에서 개별 점검하세요. 해당 로봇의 주행 준비와 경로 확인은 필요하며, 진행 중인 주문의 제어 잠금은 유지됩니다. 전체 공정 시작에는 모든 장치 준비가 필요합니다.</p>
         <p><strong>관제가 이미 켜져 있으면 중복 실행하지 않고 화면을 엽니다.</strong> 새로 실행한 터미널은 켜 두세요.</p>
         <p>관제 종료: 다른 터미널에서 <span class="short-code">hoststop</span>. 관제 웹·ROS 연결·백엔드를 종료하며 로봇 서버 종료나 비상정지는 하지 않습니다. 초기 위치 준비 중이라면 실행 중인 터미널에서 Ctrl+C를 누르세요.</p>
         <p><strong>http://localhost:8082/control.html</strong>에서 <strong>Host · M1 · M2 · 자재창고(팔1) · 제작공정(팔2·3)</strong> 연결을 확인합니다. 1개 시험도 현재 관제에서는 다섯 장치의 Action 서버 연결이 필요합니다.</p>
@@ -77,7 +78,7 @@
       <p><strong>로봇 제어 팝업:</strong> 관제 상단의 로봇 제어에서 M1·M2 상태와 목적지 버튼을 사용할 수 있습니다. 진행 중인 주문에서는 목적지 변경이 잠깁니다.</p><p><strong>M1·M2 위치 복구:</strong> 장치 카드에서 목적지를 선택하고 <strong>수동 이동</strong>을 누르세요. 주문 대기·완료 상태 또는 실패 주문의 작업 종료 후 사용할 수 있습니다. 이동 중에는 새 주문·추가 수동 이동·재시도가 잠깁니다. 주문 단계·수량은 바뀌지 않습니다. GO_TO 오류가 났다면 해당 로봇의 <strong>이동 오류 초기화</strong>를 누르세요. 실패 주문을 보관·초기화한 뒤 해당 로봇의 정지 잠금을 해제합니다. 현재 좌표와 적재물은 바뀌지 않으므로 초기 배치를 복구한 뒤 새 주문을 시작하세요. 오류 원인 해결이나 도킹 완료를 뜻하지 않습니다.</p>
       <p>실패 기록을 보관하며, 필요한 정지 응답을 확인한 뒤 주문을 비웁니다. 이동·정지 잠금 해제·주차 좌표 설정은 하지 않습니다. 연결이 끊겼거나 진행 중인 주문은 초기화할 수 없습니다.</p>
       <p><strong>로봇팔 정지·해제:</strong> 자재창고의 팔1 정지, 제작공정의 팔2·3 정지를 사용하세요. 정지 해제·재개는 중단 동작을 이어갈 수 있습니다. 제작공정 리니어는 이 정지 명령에 포함되지 않습니다. 오류 상태에서 거절되면 정지 완료로 간주하지 마세요.</p>
-      <p class="note">초기화 후 지정 주차 위치에서 <strong>hostready → hostrun</strong>. 첫 시험은 1개·자동 진행 해제로 시작하세요.</p>
+      <p class="note">웹이 켜져 있다면 실패 주문을 초기화하고, 로봇을 지정 주차 위치·방향에 직접 옮긴 뒤 전원을 켜세요. 해당 로봇 카드의 <strong>주차 위치로 옮긴 후 준비</strong>를 눌러 현장 확인 후 실행합니다. 선택한 로봇만 위치·센서·모터를 준비하며 이동 목표는 보내지 않습니다. 터미널에서는 <span class="short-code">hostamr --ready --parked --robot M1</span> 또는 M2를 사용합니다.</p>
     </section>
 
     <section id="servers" class="anchor-target" aria-labelledby="servers-title">
@@ -93,10 +94,9 @@
       </div>
       <div class="step">
         <div class="step-head"><h3>M1·M2 서버 끄기</h3><span class="where">관제 PC</span></div>
-        <p class="note">아래 <strong>robot 계정과 192.0.2.101 / 192.0.2.102 주소는 예시</strong>입니다. 실제 로봇의 계정·IP로 바꿔 실행하세요.</p>
         <p class="caution"><strong>주문과 로봇 동작이 모두 끝나고 실제 정지를 확인한 뒤</strong> 실행하세요. 서버 종료는 비상정지가 아닙니다.</p>
         <div class="columns equal">
-          <div><span class="command-label">M1 제어 서버 종료</span><div class="command"><pre><code>ssh robot@192.0.2.101 'systemctl --user stop m1-action.service'</code></pre><button class="copy" type="button" aria-label="M1 서버 종료 명령 복사">복사</button></div></div>
+          <div><span class="command-label">M1 제어 서버 종료</span><div class="command"><pre><code>ssh robot@192.0.2.104 'systemctl --user stop m1-action.service'</code></pre><button class="copy" type="button" aria-label="M1 서버 종료 명령 복사">복사</button></div></div>
           <div><span class="command-label">M2 제어 서버 종료</span><div class="command"><pre><code>ssh robot@192.0.2.102 'systemctl --user stop m2-action.service'</code></pre><button class="copy" type="button" aria-label="M2 서버 종료 명령 복사">복사</button></div></div>
         </div>
         <p>종료 후 <span class="short-code">hostamr --status</span>에서 <strong>inactive / dead</strong>를 확인합니다. 위 명령은 Action 서버만 종료하며 센서·Nav2 서비스나 로봇 전원을 끄지는 않습니다.</p>
@@ -119,7 +119,7 @@
     <p class="bottom">명령을 찾을 수 없다고 나오면 현재 터미널에서 <span class="short-code">source ~/.bashrc</span>를 한 번 실행하세요.</p>
     <div class="foot-links"><a href="control.html">관제 화면</a><a href="HOST_CONTROL_GUIDE.md">상세 관제 안내</a></div>
     <p id="copy-status" role="status" aria-live="polite"></p>
-  </main>
+  <section class="card"><h2>전체 초기화</h2><p><strong>로봇을 직접 주차 위치로 옮긴 경우:</strong> 두 로봇의 실제 주차 위치와 방향을 맞춘 뒤 전체 초기화 창에서 “M1·M2를 둘 다 지정 주차 위치·방향에 직접 놓았습니다”를 선택하세요. 위치 추정과 Nav2 준비를 먼저 확인하며 M1·M2 주차 이동은 보내지 않습니다. 주차 위치가 아닐 때는 선택하지 마세요.</p><p>관제 화면의 전체 초기화에서 팔1·2·3 초기 자세, 리니어 바깥쪽 위치, M1·M2 지정 주차 복귀를 순서대로 실행합니다. 각 단계의 성공 응답이 있어야 다음 단계로 진행하고, 모두 완료되면 기존 주문을 보관하고 비웁니다. 작업 중에는 사용할 수 없습니다.</p><p>새로 실행하는 hostrun도 같은 초기 위치로 준비합니다. 이미 관제가 켜져 있으면 기존 화면을 열므로 전체 초기화 버튼을 사용하세요. 미정리 작업이 남은 경우에는 자동 복귀를 생략하고 복구 화면을 엽니다.</p></section></main>
   <script>
     if (new URLSearchParams(location.search).get('embedded') === '1') document.body.classList.add('embedded');
     document.querySelectorAll('.copy').forEach(button => {

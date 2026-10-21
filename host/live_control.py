@@ -46,13 +46,21 @@ class LiveControl:
             'pending_commands': len(self.commands),
             'bridge_session': self.session,
             'runtime_mode': report.get('runtime_mode', 'hardware') if report else 'unknown',
+            'manual_inspection': bool(report and report.get('manual_inspection')),
             'can_start': bool(report and report.get('can_start', True) and not self.commands),
             'can_reset': bool(report and report.get('can_reset', False) and not self.commands),
             'reset_pending': bool(report and report.get('reset_pending', False)),
             'can_retry': bool(report and report.get('can_retry') and not self.commands),
             'can_manual_move': bool(report and report.get('can_manual_move') and not self.commands),
+            'manual_move_available': {robot: bool(report and not self.commands and
+                report.get('manual_move_available', {}).get(robot, report.get('can_manual_move', False)))
+                for robot in ('M1','M2')},
+            'can_prepare_parked': bool(report and report.get('can_prepare_parked') and not self.commands),
             'manual_move': report.get('manual_move') if report else None,
             'manual_revision': report.get('manual_revision', 0) if report else 0,
+            'can_full_reset': bool(report and report.get('can_full_reset') and not self.commands),
+            'full_reset': report.get('full_reset') if report else None,
+            'supports_parked_full_reset': bool(report and report.get('supports_parked_full_reset')),
             'log': (self.report['log'] if self.report else []) + list(self.log),
             'latest_event': self.report['log'][-1] if self.report and self.report['log'] else (self.log[-1] if self.log else ''),
         }
@@ -159,8 +167,15 @@ class LiveControl:
                        'reset_pending': report.get('reset_pending', False) is True,
                        'can_retry': report.get('can_retry') is True,
                        'can_manual_move': report.get('can_manual_move') is True,
+                       'manual_inspection': report.get('manual_inspection') is True,
+                       'manual_move_available': {robot: (report.get('manual_move_available') or {}).get(robot,
+                            report.get('can_manual_move')) is True for robot in ('M1','M2')},
+                       'can_prepare_parked': report.get('can_prepare_parked') is True,
                        'manual_move': report.get('manual_move'),
                        'manual_revision': report.get('manual_revision', 0),
+                       'can_full_reset': report.get('can_full_reset') is True,
+                       'full_reset': report.get('full_reset'),
+                       'supports_parked_full_reset': report.get('supports_parked_full_reset') is True,
                        'runtime_mode': 'mock' if report.get('runtime_mode') == 'mock' else 'hardware'}
         self.revision = report['revision']
         self.last_report_at = self.clock()
@@ -190,8 +205,40 @@ class LiveControl:
                 if type(payload['auto_advance']) is not bool:
                     raise ValueError('auto_advance는 boolean이어야 합니다.')
                 command['auto_advance'] = payload['auto_advance']
+        elif action == 'full_reset':
+            parked = payload.get('amrs_parked', False)
+            if type(parked) is not bool or (parked and (self.report['runtime_mode'] != 'hardware'
+                                                       or not self.report.get('supports_parked_full_reset'))):
+                raise ValueError('지정 주차 위치 확인은 실물 모드에서만 가능합니다.')
+            if (not self.report.get('can_full_reset') or payload.get('operator_confirmed') is not True
+                    or payload.get('order_id') != (order or {}).get('id')
+                    or type(payload.get('recovery_revision')) is not int
+                    or payload['recovery_revision'] != self.report.get('manual_revision', 0)):
+                raise ValueError('장치 정지·작업 종료·팔 복귀와 주차 경로 확인 후 다시 실행하세요.')
+            command = dict(action=action, order_id=(order or {}).get('id'), operator_confirmed=True,
+                           recovery_revision=payload['recovery_revision'])
+            if parked: command['amrs_parked'] = True
+        elif action == 'cancel_full_reset':
+            reset = self.report.get('full_reset') or {}
+            if reset.get('status') != 'running' or payload.get('reset_id') != reset.get('id'):
+                raise ValueError('진행 중인 전체 초기화가 아닙니다.')
+            command = dict(action=action, reset_id=reset['id'])
+        elif action == 'prepare_parked':
+            if (not self.report.get('can_prepare_parked') or self.report['runtime_mode'] != 'hardware'
+                    or order and order['status'] != 'done'
+                    or payload.get('device') not in ('M1', 'M2')
+                    or payload.get('operator_confirmed') is not True
+                    or 'order_id' not in payload
+                    or payload['order_id'] != (order['id'] if order else None)
+                    or type(payload.get('recovery_revision')) is not int
+                    or payload['recovery_revision'] != self.report['manual_revision']):
+                raise ValueError('주문 초기화·작업 종료·지정 주차 위치와 방향을 확인하세요.')
+            command = dict(action=action, device=payload['device'], operator_confirmed=True,
+                           order_id=payload['order_id'], recovery_revision=payload['recovery_revision'])
         elif action in ('retry', 'manual_move'):
             flag = 'can_retry' if action == 'retry' else 'can_manual_move'
+            if action == 'manual_move' and not self.report['manual_move_available'].get(payload.get('device')):
+                raise ValueError('선택한 로봇 연결·작업 종료 상태를 확인하세요.')
             standalone = action == 'manual_move' and (not order or order['status'] == 'done')
             expected_id = order['id'] if order else None
             expected_stage = order['stage'] if order else 0

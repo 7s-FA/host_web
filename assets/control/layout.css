@@ -1,0 +1,77 @@
+/* Operator layout: visible movement/stop controls, secondary recovery tools. */
+body{height:auto;min-height:100dvh;background:#f2f5f8;color:#203545}
+.topbar{height:58px}.control-main{display:block;max-width:1700px;padding:18px 22px 24px}
+.control-heading{margin-bottom:14px}.control-heading h1{font-size:23px}
+.bridge-pill{font-size:12px;padding:8px 14px}
+.nav-more{position:relative}.nav-more summary{cursor:pointer;padding:9px}
+.nav-more>div{position:absolute;right:0;top:38px;z-index:8;min-width:150px;padding:8px;background:#203545;border:1px solid #536675;border-radius:9px;box-shadow:0 8px 24px #13273533}
+.nav-more a{display:block;padding:10px}
+.control-workspace{grid-template-columns:minmax(340px,.85fr) minmax(540px,1.15fr);align-items:stretch;gap:16px}
+.control-grid{grid-template-columns:1fr 1fr;grid-template-areas:"devices devices" "conditions logs";grid-template-rows:auto auto;gap:12px;align-content:start}
+.control-card{padding:16px;border-color:#dce4eb;box-shadow:0 2px 6px #18344804;border-radius:12px;overflow:visible}
+.card-head{margin-bottom:12px}.card-head h2{font-size:16px}
+.live-overview{min-height:560px;max-height:790px}
+.live-overview iframe{height:570px;min-height:440px;flex:1;margin:0}
+.live-overview .map-caption{font-size:11px;color:#667b8d;margin:10px 0 0}
+.full-reset-status{display:flex;align-items:center;gap:12px;padding:12px 16px;margin:0 0 12px;background:#fffbf4}
+.full-reset-status strong{font-size:13px;white-space:nowrap}.full-reset-status p{font-size:12px;line-height:1.5;margin:0;flex:1}
+.full-reset-status button{padding:8px 12px;background:#fff;border:1px solid #d6b477;border-radius:7px}
+.order-panel{margin-bottom:14px;background:#fff;border:1px solid #dce4eb;border-radius:12px;overflow:hidden}
+.order-panel>summary{cursor:pointer;padding:12px 16px;font-size:14px;display:list-item;list-style-position:inside}
+.order-panel>summary>span{margin-left:12px;font-size:12px;color:#708290}
+.order-panel[open]>summary{border-bottom:1px solid #e8edf2}
+.order-panel .order-card{display:grid;grid-template-columns:minmax(220px,.85fr) minmax(320px,1.15fr) minmax(230px,1fr);gap:10px 22px;border:0;box-shadow:none;border-radius:0}
+.order-card>.card-head{grid-column:1/-1;margin:0}.order-card .order-fields{grid-column:1;grid-row:2/4;align-self:center}
+.order-card .auto-advance{grid-column:2;grid-row:2;margin:0}.order-card .control-actions{grid-column:2;grid-row:3;margin:0}
+.order-card .order-progress{grid-column:3;grid-row:2;margin:0;padding:0;border:0}
+.order-card .counters{grid-column:3;grid-row:3}.order-card .pause-note{grid-column:2;font-size:11px}
+.order-card #command-note{grid-column:1/-1;margin:0}.order-card #command-note:empty{display:none}
+.order-fields legend{font-size:12px}.choice-buttons button{min-height:40px;font-size:13px}
+.control-actions button{min-height:40px;font-size:13px;border-radius:8px}.control-primary{background:#1765b5!important}
+.order-tools .log-button{font-size:12px;padding:7px 10px}.order-tools{gap:8px}
+.counters>div{padding:8px 10px}.counters span{font-size:11px}.counters strong{font-size:19px}
+.device-card>.connection-note{display:none}.device-list{gap:12px;align-items:stretch}
+.device-item{padding:13px;border:1px solid #dce5ec;background:#fafcfe;border-radius:10px}
+.device-item header{gap:9px;margin-bottom:5px}.device-item header>strong{font-size:17px;letter-spacing:-.3px}
+.device-item .device-connection{font-size:12px}.device-item .device-components{font-size:11px;margin:0 0 8px}
+.device-item .device-work-state{font-size:12px}.device-item .device-detail{font-size:11px;line-height:1.5;white-space:normal;margin:4px 0}
+.device-item[data-state=idle] .device-detail{display:none}
+.device-item .log-button{font-size:11px;padding:5px 9px;border-radius:6px}
+.device-item .robot-battery{font-size:12px}.robot-battery-control{margin:7px 0}
+.robot-stop-control{margin-top:9px;padding-top:9px;gap:5px}
+.robot-stop-buttons,.cell-control .cell-controls{gap:7px}
+.robot-stop-buttons button,.cell-control .cell-controls button{font-size:13px;min-height:40px;padding:9px 5px;border-radius:7px}
+.robot-stop-button,.cell-control .cell-stop{background:#b8343d;border-color:#b8343d;color:#fff}
+.robot-stop-button:hover:not(:disabled),.cell-control .cell-stop:hover:not(:disabled){background:#a22832;color:#fff}
+.robot-restart-button,.cell-control .cell-release{background:#fff;border-color:#b6c8d6;color:#314f65}
+.device-item .robot-stop-status{font-size:11px;line-height:1.4}
+.manual-move-control{gap:7px;margin-top:10px;padding-top:10px;grid-template-columns:minmax(0,1fr) 72px}
+.manual-move-control select,.manual-move-control button{font-size:13px;min-height:40px;padding:8px 10px}
+.manual-move-control button{background:#1765b5;color:#fff;border-color:#1765b5}
+.device-item .manual-move-control p{font-size:11px;margin:0}
+.device-recovery{margin-top:9px;border-top:1px solid #e1e8ee;padding-top:8px}
+.device-recovery summary{font-size:12px;color:#526b80;cursor:pointer;padding:3px 0}
+.device-recovery .robot-error-reset-button{margin-top:8px}.device-recovery [data-parked-robot]{font-size:12px}
+.device-recovery p{font-size:11px!important}
+.cell-control{margin-top:10px;padding-top:10px}.cell-control p{font-size:11px;line-height:1.4}
+.cell-control .robot-error-reset-button{margin-top:8px;min-height:34px;font-size:12px}
+.condition-card,.log-card{min-height:95px;padding:13px 16px}.condition-list{overflow:visible}.condition-list li,.log-summary{font-size:12px}
+.log-card .log-button{font-size:12px;padding:6px 10px}
+button:disabled,.manual-move-control :disabled{opacity:1!important;color:#8a99a6!important;background:#edf1f5!important;border-color:#e0e7ed!important;cursor:not-allowed}
+button:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #64a8ed;outline-offset:3px}
+.order-panel[open] summary:focus-visible{outline-offset:-3px}
+@media(max-width:1050px){
+ .control-main{padding:14px}.control-workspace{grid-template-columns:minmax(280px,.8fr) minmax(420px,1.2fr);gap:12px}
+ .order-panel .order-card{grid-template-columns:1fr 1fr}.order-card .order-progress,.order-card .counters{grid-column:auto;grid-row:auto}.order-card .pause-note{grid-column:2}.order-card .control-actions{grid-template-columns:1fr 1fr 1.2fr}
+ .control-card{padding:12px}.device-item{padding:11px}.device-list{gap:9px}
+ .robot-stop-buttons button,.cell-control .cell-controls button{font-size:12px}
+}
+@media(max-width:759px){
+ .topbar .control-nav{gap:7px}.control-heading h1{font-size:21px}.control-heading{display:flex;align-items:center}
+ .bridge-pill{font-size:11px;padding:7px 9px}.control-workspace{display:flex;flex-direction:column}.control-grid{order:0}.live-overview{order:1;min-height:390px;max-height:none}
+ .live-overview iframe{height:430px;min-height:350px;flex:none}.order-panel .order-card{display:block}.order-card>*{margin-top:10px!important}
+ .order-card .card-head{flex-wrap:wrap}.full-reset-status{flex-wrap:wrap}.full-reset-status p{flex-basis:65%}
+ .device-list{grid-template-columns:repeat(2,minmax(0,1fr))}.device-item header{flex-wrap:wrap}.device-item .device-connection{margin-left:0}
+ .robot-stop-buttons,.cell-control .cell-controls{grid-template-columns:1fr}.manual-move-control{grid-template-columns:1fr}.manual-move-control button{min-height:40px}
+ .order-panel>summary>span{font-size:11px}.condition-card,.log-card{grid-column:1/-1}.control-grid{grid-template-areas:"devices devices" "conditions conditions" "logs logs"}
+}

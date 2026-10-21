@@ -7,8 +7,10 @@
  const labels={unknown:'확인 불가',offline:'연결 끊김',idle:'대기',running:'작업 중',done:'완료',failed:'오류'};
  const orderLabels={idle:'주문 대기',running:'작업 중',waiting:'다음 지시 대기',paused:'일시정지',done:'주문 완료',failed:'오류'};
  const productButtons=[...document.querySelectorAll('[data-product-type]')],quantityButtons=[...document.querySelectorAll('[data-quantity]')];
+ const canMove=(data,device)=>data?.manual_move_available?.[device]??data?.can_manual_move;
  const destinations={GO_TO_MAT:'자재창고',GO_TO_ASM:'조립대',GO_TO_REST:'대기장소',GO_TO_PARK:'지정 주차장'};
- let recovery=null,autoDraftKey=null,resetRobot=null,resetSelection=null,robotControls=null,resetOutcome='';
+ let fullResetSelection=null,layoutMode=null;
+ let recovery=null,parkedSelection=null,autoDraftKey=null,resetRobot=null,resetSelection=null,robotControls=null,resetOutcome='';
  $('auto-advance').checked=true;
  let resetOrderId=null,current=null,busy=false,polling=false,productType='A',quantity=2,selectionInitialized=false,logTarget='host',logSignature='';
  const list=$('device-list');
@@ -18,7 +20,7 @@
   title.textContent=name;state.className='device-work-state';state.textContent='작업 · 확인 불가';
   connection.className='device-connection';connection.dataset.deviceConnection=key;connection.dataset.state='waiting';connection.setAttribute('role','status');dot.className='connection-dot';dot.setAttribute('aria-hidden','true');connectionText.className='connection-text';connectionText.textContent='확인 중';connection.append(dot,connectionText);
   caption.className='device-components';caption.textContent=components[key];detail.className='device-detail';detail.textContent='Host 보고 대기';
-  button.type='button';button.className='log-button';button.textContent='로그 보기 ↗';button.setAttribute('aria-label',name+' 로그 보기');button.onclick=()=>openLog(key);
+  button.type='button';button.className='log-button';button.textContent='로그';button.setAttribute('aria-label',name+' 로그 보기');button.onclick=()=>openLog(key);
   const workRow=document.createElement('div');workRow.className='device-work-row';workRow.append(state,button);
   header.append(title,connection);item.append(header,caption,workRow,detail);
   if(key==='M1'||key==='M2'){
@@ -33,21 +35,27 @@
    status.className='robot-stop-status';status.dataset.stopStatus=key;status.setAttribute('role','status');status.textContent='정지 연결 확인 중';
    const errorReset=document.createElement('button');
    errorReset.type='button';errorReset.className='robot-error-reset-button';errorReset.dataset.errorResetRobot=key;
-   errorReset.textContent=key+' 이동 오류 초기화';errorReset.disabled=true;
+   errorReset.textContent='이동 오류 초기화';errorReset.setAttribute('aria-label',key+' 이동 오류 초기화');errorReset.disabled=true;
    errorReset.title='해당 로봇의 오류 잠금과 실패 주문을 함께 초기화합니다.';
    errorReset.onclick=()=>openReset(key);
-   controls.append(label,buttons,errorReset,status);item.append(controls);
+   controls.append(label,buttons,status);item.append(controls);
    const move=document.createElement('div'),select=document.createElement('select'),send=document.createElement('button'),hint=document.createElement('p');
    move.className='manual-move-control';select.dataset.moveDestination=key;select.setAttribute('aria-label',key+' 수동 이동 목적지');
    for(const [value,text] of Object.entries(destinations)){const option=document.createElement('option');option.value=value;option.textContent=text;select.append(option);}
-   send.type='button';send.dataset.moveRobot=key;send.textContent=key+' 수동 이동';send.disabled=true;
+   send.type='button';send.dataset.moveRobot=key;send.textContent='이동';send.setAttribute('aria-label',key+' 수동 이동');send.disabled=true;
    send.onclick=()=>openRecovery('manual_move',{device:key,destination:select.value});
-   hint.className='subtle';hint.dataset.moveStatus=key;hint.textContent='주문 대기 또는 실패 작업 종료 후 사용';
+   hint.className='subtle';hint.dataset.moveStatus=key;hint.textContent='장치 연결·작업 상태 확인';
    move.append(select,send,hint);item.append(move);
+   const parked=document.createElement('button'),parkedHint=document.createElement('p');
+   parked.type='button';parked.dataset.parkedRobot=key;parked.disabled=true;
+   parked.textContent='주차 위치 재설정';parked.setAttribute('aria-label',key+' 주차 위치로 옮긴 후 준비');
+   parked.onclick=()=>openParked(key);
+   parkedHint.className='subtle';parkedHint.dataset.parkedStatus=key;
+   const recoveryTools=document.createElement('details'),recoveryTitle=document.createElement('summary');recoveryTools.className='device-recovery';recoveryTitle.textContent='복구·위치 설정';recoveryTools.append(recoveryTitle,errorReset,parked,parkedHint);item.append(recoveryTools);
   }
   list.append(item);
  }
- function alert(text,ok=false){$('control-alert').textContent=text;$('control-alert').classList.toggle('ok',ok);}
+ function alert(text,ok=false){$('control-alert').hidden=ok;$('control-alert').textContent=text;$('control-alert').classList.toggle('ok',ok);}
  function quantityPolicy(){
   const p=current?.order_policy||{quantity_min:1,quantity_max:2,quantity_default:2};
   return {min:Math.max(1,Math.min(2,p.quantity_min)),max:Math.min(2,p.quantity_max),default:Math.min(2,p.quantity_default)};
@@ -72,17 +80,46 @@
  }
  function openLog(target){logTarget=target;logSignature='';$('log-dialog').showModal();renderLog();}
  function paint(data){
+  const modeKey=data.manual_inspection?'manual':'production';
+  if(data.bridge_connected&&layoutMode!==modeKey){layoutMode=modeKey;document.body.dataset.controlMode=modeKey;$('order-panel').open=modeKey!=='manual';}
+  $('control-alert').hidden=!!data.bridge_connected;
   if(resetOutcome&&!busy&&data.order?.id&&data.order.id!==current?.order?.id)resetOutcome='';
   current=data;
+  const fullResetAllowed=!!data.bridge_connected&&!busy&&!data.pending_commands&&!!data.can_full_reset;
+  $('full-reset').disabled=!fullResetAllowed;
+  $('full-reset-parked').disabled=data.runtime_mode!=='hardware'||!data.supports_parked_full_reset;
+  $('full-reset').title=fullResetAllowed?'팔·리니어 초기 위치 및 M1·M2 주차 복귀':'장치 연결·모든 작업 종료 확인 후 사용';
+  const fullResetCurrent=fullResetSelection&&fullResetSelection.order_id===(data.order?.id??null)&&fullResetSelection.recovery_revision===data.manual_revision;
+  $('confirm-full-reset').disabled=!fullResetAllowed||!fullResetCurrent;
+  $('full-reset-note').textContent=fullResetCurrent&&fullResetAllowed?'실제 이동이 시작됩니다.':'상태가 바뀌었거나 작업 중입니다. 창을 닫고 다시 확인하세요.';
+  const fr=data.full_reset;
+  window.hostInitialPreparationBusy=!!fr&&(fr.status==='running'||fr.uncertain);
+  $('full-reset-progress').hidden=!fr;
+  $('full-reset-label').textContent=fr?(fr.status==='done'?'전체 초기 준비 완료':fr.status==='failed'?'전체 초기화 중단':`전체 초기화 ${Math.min(fr.step+1,fr.total)}/${fr.total} · ${fr.label}`):'';
+  $('full-reset-detail').textContent=fr?(fr.error||(fr.status==='done'?'팔1·2·3 초기 자세 · 리니어 바깥쪽 · M1·M2 지정 주차 완료':'단계별 완료 응답 확인 중 · 다른 이동 지시 보류'))+(fr.uncertain?' · 장치 결과 미확인, 현장 확인 필요':''):'';
+  $('cancel-full-reset-run').hidden=fr?.status!=='running';
+  $('cancel-full-reset-run').disabled=!data.bridge_connected||busy||!!data.pending_commands;
+
+  const prepareAllowed=!!data.bridge_connected&&!busy&&!data.pending_commands&&!!data.can_prepare_parked;
+  for(const key of ['M1','M2']){
+   document.querySelector(`[data-parked-robot="${key}"]`).disabled=!prepareAllowed;
+   document.querySelector(`[data-parked-status="${key}"]`).textContent=data.manual_move?.command==='PREPARE_PARKED'&&data.manual_move.device===key
+    ?(data.manual_move.failed?'준비 결과 미확인 · Host 로그 확인':'주차 위치·센서·모터 준비 중')
+    :prepareAllowed?'직접 주차 위치·방향에 놓은 뒤 사용 · 이동 목표 없음':'주문 초기화 및 다른 작업 종료 후 사용';
+  }
+  const parkedCurrent=parkedSelection&&parkedSelection.order_id===(data.order?.id??null)
+    &&parkedSelection.recovery_revision===(data.manual_revision||0);
+  $('confirm-parked').disabled=!prepareAllowed||!parkedCurrent;
+  $('parked-note').textContent=prepareAllowed&&parkedCurrent?'선택한 로봇만 준비합니다.':'주문·연결·작업 상태가 변경됐습니다. 창을 닫고 다시 확인하세요.';
   for(const key of ['M1','M2']){
    const button=document.querySelector(`[data-error-reset-robot="${key}"]`);
    button.disabled=!data.bridge_connected||busy||data.pending_commands>0||!data.can_reset||!robotControls?.robots[key]?.canRestart;
    button.title=button.disabled?'실패 주문·장치 연결·작업 종료 확인 후 사용':'실패 주문 초기화 후 해당 로봇 정지 잠금 해제 · 자동 이동 없음';
   }
   const connected=!!data.bridge_connected,order=data.order;
-  $('bridge-pill').textContent=connected?(data.runtime_mode==='mock'?'모의 장치 · 실물 연결 없음':'실물 장치 · ROS Host 보고 수신 중'):data.bridge_configured?'ROS Host 보고 끊김':'ROS Host 어댑터 미설정';
+  $('bridge-pill').textContent=connected?(data.manual_inspection?'수동 점검':data.runtime_mode==='mock'?'모의 장치 · 실물 연결 없음':'실물 관제 · 연결됨'):data.bridge_configured?'ROS Host 보고 끊김':'ROS Host 어댑터 미설정';
   $('bridge-pill').classList.toggle('connected',connected);
-  alert(connected?'Host 어댑터에서 작업 결과를 수신하고 있습니다.':data.bridge_configured?'Host 어댑터 보고가 끊겼습니다. 다음 지시를 보류합니다.':'ROS 2 Host 어댑터가 연결되지 않아 주문·작업 로그를 기다립니다. 장치 연결 표시등은 별도로 확인합니다.',connected);
+  alert(connected?(data.manual_inspection?'수동 점검 모드 · 다른 장치의 연결·공정 완료 조건 없이 개별 이동 가능. 전체 공정은 hostrun에서 실행하세요.':'Host 어댑터에서 작업 결과를 수신하고 있습니다.'):data.bridge_configured?'Host 어댑터 보고가 끊겼습니다. 다음 지시를 보류합니다.':'ROS 2 Host 어댑터가 연결되지 않아 주문·작업 로그를 기다립니다. 장치 연결 표시등은 별도로 확인합니다.',connected);
   const policy=quantityPolicy();
   if(!selectionInitialized){quantity=policy.default;selectionInitialized=true;}
   quantity=Math.max(policy.min,Math.min(policy.max,quantity));
@@ -107,17 +144,18 @@
   $('retry-order').disabled=!connected||busy||data.pending_commands>0||!data.can_retry;
   const sameRecovery=recovery&&(order?.id??null)===recovery.order_id&&(order?.stage??0)===recovery.stage
    &&(order?order.recovery_revision||0:data.manual_revision||0)===recovery.recovery_revision;
-  const recoveryAllowed=connected&&!busy&&!data.pending_commands&&sameRecovery&&(recovery.action==='retry'?data.can_retry:data.can_manual_move);
+  const recoveryAllowed=connected&&!busy&&!data.pending_commands&&sameRecovery&&(recovery.action==='retry'?data.can_retry:canMove(data,recovery.device));
   $('confirm-recovery').disabled=!recoveryAllowed;
   $('recovery-dialog-note').textContent=recoveryAllowed?'': '주문·연결·진행 상태가 변경되었습니다. 창을 닫고 상태를 다시 확인하세요.';
   for(const key of ['M1','M2']){
-   const allowed=connected&&!busy&&!data.pending_commands&&data.can_manual_move;
+   const allowed=connected&&!busy&&!data.pending_commands&&canMove(data,key);
    document.querySelector(`[data-move-robot="${key}"]`).disabled=!allowed;
    document.querySelector(`[data-move-destination="${key}"]`).disabled=!allowed;
    document.querySelector(`[data-move-status="${key}"]`).textContent=data.manual_move?.device===key
-     ?`${destinations[data.manual_move.command]||data.manual_move.command} · ${data.manual_move.failed?'정지·최종 응답 확인 중':'이동 결과 대기'}`
-     :allowed?(status==='failed'?'실패 복구용 · 주문 단계와 수량 유지':'목적지 선택 → 수동 이동 · 확인 후 출발')
-       :!connected?'Host 연결 확인 후 사용':data.manual_move?'수동 이동 종료 후 사용':'주문 대기 또는 실패 작업 종료 후 사용';
+     ?data.manual_move.command==='PREPARE_PARKED'?'주차 준비 중'
+      :`${destinations[data.manual_move.command]||data.manual_move.command} · ${data.manual_move.failed?'정지·최종 응답 확인 중':'이동 결과 대기'}`
+     :allowed?(status==='failed'?'실패 복구용 · 주문 단계와 수량 유지':'목적지 선택 후 이동')
+       :!connected?'Host 연결 확인 후 사용':data.manual_move?'수동 이동 종료 후 사용':'장치 연결·작업 상태 확인';
   }
   $('reset-order').hidden=status!=='failed';
   $('reset-order').disabled=!connected||busy||data.pending_commands>0||!data.can_reset;
@@ -126,12 +164,14 @@
   $('reset-dialog-note').textContent=order?.id!==resetOrderId?'주문이 변경되었습니다. 창을 닫고 다시 확인하세요.':!data.can_reset?'장치 연결 또는 이전 지시 응답을 확인한 뒤 초기화할 수 있습니다.':'';
   $('start-order').disabled=!connected||locked||data.can_start===false;
   $('next-stage').disabled=!connected||busy||!data.can_advance;
-  $('pause-order').disabled=!connected||busy||data.pending_commands>0||order?.pause_requested&&status!=='paused'||!['running','waiting','paused'].includes(status);
+  $('pause-order').disabled=window.hostInitialPreparationBusy||!connected||busy||data.pending_commands>0||order?.pause_requested&&status!=='paused'||!['running','waiting','paused'].includes(status);
   $('pause-order').textContent=status==='paused'?'재개':order?.pause_requested?'현재 동작 완료 대기':'단계 후 일시정지';
-  $('command-note').textContent=data.pending_commands?`Host 어댑터 지시 수락 대기 · ${data.pending_commands}건`:order?.plan_mode==='parallel-v1'?'선행 작업 완료 후 병렬 진행 · 공용 통로는 이동로봇 1대만 사용':'장치 완료와 선행 조건은 Host가 판정합니다.';
+  $('command-note').textContent=data.pending_commands?`Host 어댑터 지시 수락 대기 · ${data.pending_commands}건`:order?.plan_mode==='parallel-v1'?'선행 작업 완료 후 병렬 진행 · 공용 통로는 이동로봇 1대만 사용':'';
   if(order?.pause_requested&&status==='running')$('command-note').textContent='실행 중인 모든 작업의 완료 Result를 기다립니다. 새 작업은 시작하지 않습니다.';
   if(order?.fault){$('command-note').textContent=order.fault;alert(order.fault);}
-  if(data.manual_move)$('command-note').textContent=`${data.manual_move.device} 수동 이동 중 · 재시도와 다른 이동은 결과 확인 후 가능`;
+  if(data.manual_move)$('command-note').textContent=data.manual_move.command==='PREPARE_PARKED'
+   ?`${data.manual_move.device} 주차 준비 ${data.manual_move.failed?'결과 미확인 · Host 로그 확인':'중 · 완료 전 다른 작업 보류'}`
+   :`${data.manual_move.device} 수동 이동 중 · 재시도와 다른 이동은 결과 확인 후 가능`;
   if(data.reset_pending){$('command-note').textContent='실패 장치 정지 응답 확인 중 · 초기화 대기';alert('정지 응답 확인 후 실패 주문을 초기화합니다.');}
   for(const key of Object.keys(names)){
    const item=$('device-'+key),value=connected&&data.devices?.[key]||{state:'unknown',detail:'Host 보고 대기'};
@@ -168,9 +208,26 @@
  $('next-stage').onclick=()=>issue('next');
  $('pause-order').onclick=()=>issue(current?.order?.status==='paused'?'resume':'pause');
  $('host-log').onclick=()=>openLog('host');
+ $('full-reset').onclick=()=>{if($('full-reset').disabled)return;fullResetSelection={order_id:current.order?.id??null,recovery_revision:current.manual_revision};$('full-reset-confirmed').checked=false;$('full-reset-parked').checked=false;paint(current);$('full-reset-dialog').showModal();};
+ $('cancel-full-reset').onclick=()=>$('full-reset-dialog').close();
+ $('full-reset-form').onsubmit=event=>{event.preventDefault();if(!$('full-reset-confirmed').checked||$('confirm-full-reset').disabled||$('full-reset-parked').checked&&$('full-reset-parked').disabled)return;const parked=$('full-reset-parked').checked;$('full-reset-dialog').close();issue('full_reset',{...fullResetSelection,operator_confirmed:true,...(parked?{amrs_parked:true}:{})});};
+ $('cancel-full-reset-run').onclick=()=>{if(current?.full_reset?.status==='running')issue('cancel_full_reset',{reset_id:current.full_reset.id});};
+
+ function openParked(device){
+  if(!current?.can_prepare_parked||busy||current.pending_commands)return;
+  parkedSelection={device,order_id:current.order?.id??null,recovery_revision:current.manual_revision||0};
+  $('parked-title').textContent=device+' 주차 위치로 옮긴 후 준비';
+  $('parked-confirmed').checked=false;paint(current);$('parked-dialog').showModal();
+ }
+ $('cancel-parked').onclick=()=>$('parked-dialog').close();
+ $('parked-form').onsubmit=event=>{
+  event.preventDefault();
+  if(!$('parked-confirmed').checked||$('confirm-parked').disabled)return;
+  $('parked-dialog').close();issue('prepare_parked',{...parkedSelection,operator_confirmed:true});
+ };
  function openRecovery(action,extra={}){
   const order=current?.order;
-  if(!current||!(action==='retry'?order&&current.can_retry:current.can_manual_move))return;
+  if(!current||!(action==='retry'?order&&current.can_retry:canMove(current,extra.device)))return;
   recovery={action,order_id:order?.id??null,stage:order?.stage??0,
    recovery_revision:order?order.recovery_revision||0:current.manual_revision||0,...extra};
   $('recovery-title').textContent=action==='retry'?'실패 단계 재시도':extra.device+' 수동 이동';

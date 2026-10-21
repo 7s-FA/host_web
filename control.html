@@ -1,30 +1,40 @@
 <!doctype html>
 <html lang="ko">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Robot3 · Host 관제</title><link rel="stylesheet" href="styles.css?v=20261011-order2"><link rel="stylesheet" href="device-connection.css?v=20261011-connection"><link rel="stylesheet" href="control.css?v=20261019-control-tools"><link rel="stylesheet" href="usage-modal.css?v=20261019-pages"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Robot3 · Host 관제</title><link rel="stylesheet" href="styles.css?v=20261011-order2"><link rel="stylesheet" href="device-connection.css?v=20261011-connection"><link rel="stylesheet" href="control.css?v=20261020-full-reset"><link rel="stylesheet" href="usage-modal.css?v=20261019-pages"><link rel="stylesheet" href="assets/control/layout.css?v=20261021"></head>
 <body>
-<header class="topbar"><a class="brand" href="./"><span class="brand-icon">R<span>3</span></span><strong>ROBOT3<span>FACTORY LAB</span></strong></a><nav class="control-nav" aria-label="페이지"><button id="open-robot-panel" class="usage-trigger" type="button" aria-haspopup="dialog" aria-controls="robot-panel-dialog">로봇 제어</button><button id="open-usage" class="usage-trigger" type="button" aria-haspopup="dialog" aria-controls="usage-dialog">사용방법</button><a href="./">시뮬레이션</a><a href="waypoints.html">웨이포인트</a><a href="downloads.html">다운로드</a></nav></header>
+<header class="topbar"><a class="brand" href="./"><span class="brand-icon">R<span>3</span></span><strong>ROBOT3<span>FACTORY LAB</span></strong></a><nav class="control-nav" aria-label="페이지"><button id="open-robot-panel" class="usage-trigger" type="button" aria-haspopup="dialog" aria-controls="robot-panel-dialog">로봇 제어</button><button id="open-usage" class="usage-trigger" type="button" aria-haspopup="dialog" aria-controls="usage-dialog">사용방법</button><details class="nav-more"><summary>더 보기</summary><div><a href="./">시뮬레이션</a><a href="waypoints.html">웨이포인트</a><a href="downloads.html">다운로드</a></div></details></nav></header>
 <main class="control-main">
-<div class="control-heading"><div><p class="eyebrow">HOST PC · LIVE CONTROL</p><h1>실물 <span>관제</span></h1></div><span id="bridge-pill" class="bridge-pill">Host 어댑터 확인 중</span></div>
+<div class="control-heading"><div><h1>실물 <span>관제</span></h1></div><span id="bridge-pill" class="bridge-pill">Host 어댑터 확인 중</span></div>
+<div class="control-card full-reset-status" id="full-reset-progress" hidden><strong id="full-reset-label"></strong><p id="full-reset-detail" role="status"></p><button id="cancel-full-reset-run" type="button">초기화 중단</button></div>
 <div id="control-alert" class="control-alert" role="status" aria-live="polite">로컬 Host 서버에 연결 중입니다.</div>
+<details class="order-panel" id="order-panel" open><summary><strong>생산 주문</strong><span>제품·수량·공정 제어</span></summary><section class="control-card order-card" aria-labelledby="order-heading"><div class="card-head"><div><p class="eyebrow">ORDER</p><h2 id="order-heading">공정 제어</h2></div><div class="order-tools"><button id="full-reset" class="log-button" type="button" disabled>전체 초기화</button><button id="retry-order" class="log-button" type="button" hidden disabled>실패 단계 재시도</button><button id="reset-order" class="log-button" type="button" hidden disabled>실패 주문 초기화</button><strong id="order-status" class="status-tag">주문 없음</strong></div></div><div class="order-fields">
+<fieldset><legend>제품 선택</legend><div class="choice-buttons" id="product-choices"><button type="button" data-product-type="A" aria-pressed="true">A제품</button><button type="button" data-product-type="B" aria-pressed="false">B제품</button></div></fieldset>
+<fieldset><legend>수량</legend><div class="choice-buttons" id="quantity-choices"><button type="button" data-quantity="1" aria-pressed="false">1개</button><button type="button" data-quantity="2" aria-pressed="true">2개</button></div></fieldset>
+</div><label class="auto-advance"><input type="checkbox" id="auto-advance" checked> 자동 진행</label><div class="control-actions"><button id="start-order" class="control-primary" disabled>주문 시작</button><button id="next-stage" disabled>다음 단계</button><button id="pause-order" disabled>단계 후 일시정지</button></div><p class="subtle pause-note">일시정지는 현재 동작 완료 후 적용됩니다.</p><p id="order-selection" class="order-selection visually-hidden">A제품 · 2개 선택</p><p id="order-id" class="subtle visually-hidden">주문 ID —</p><div class="order-progress"><div class="stage-line"><span>완료 단계</span><strong id="stage-number">—</strong></div><p id="stage-label" class="subtle">—</p></div><div class="counters"><div><span>운송 잔여</span><strong id="transport-count">—</strong></div><div><span>완제품 잔여</span><strong id="product-count">—</strong></div><div><span>적재 완료</span><strong id="completed-count">—</strong></div></div><p id="command-note" class="subtle">Host 어댑터의 작업 결과를 기다립니다.</p></section></details>
 <div class="control-workspace">
 <section class="control-card live-overview" aria-labelledby="live-heading">
-<div class="card-head"><div><p class="eyebrow">LIVE MAP</p><h2 id="live-heading">실물 위치·작업 상태</h2></div><a href="./?live=1" target="_blank" rel="noopener">크게 보기 ↗</a></div>
-<p class="subtle">공정 배치도 · 회색은 과거 수신 위치</p>
+<div class="card-head"><div><p class="eyebrow">LIVE MAP</p><h2 id="live-heading">공정 지도</h2></div><a href="./?live=1" target="_blank" rel="noopener">크게 보기 ↗</a></div>
+
 <iframe id="live-map-frame" title="M1·M2 실제 위치와 로봇팔 상태" src="./?live=1&amp;embedded=1" loading="eager"></iframe>
-<p class="subtle">로봇·경유점은 실제 좌표 · 설비 그림 크기는 표시용</p>
+<p class="map-caption">회색 로봇은 마지막 수신 위치 · 설비 크기는 안내용</p>
 </section>
 <div class="control-grid">
-<section class="control-card order-card" aria-labelledby="order-heading"><div class="card-head"><div><p class="eyebrow">ORDER</p><h2 id="order-heading">주문·단계</h2></div><div class="order-tools"><button id="retry-order" class="log-button" type="button" hidden disabled>실패 단계 재시도</button><button id="reset-order" class="log-button" type="button" hidden disabled>실패 주문 초기화</button><strong id="order-status" class="status-tag">주문 없음</strong></div></div><div class="order-fields">
-<fieldset><legend>제품 선택</legend><div class="choice-buttons" id="product-choices"><button type="button" data-product-type="A" aria-pressed="true">A제품</button><button type="button" data-product-type="B" aria-pressed="false">B제품</button></div></fieldset>
-<fieldset><legend>주문 수량 · 최대 2개</legend><div class="choice-buttons" id="quantity-choices"><button type="button" data-quantity="1" aria-pressed="false">1개</button><button type="button" data-quantity="2" aria-pressed="true">2개</button></div></fieldset>
-</div><label class="auto-advance"><input type="checkbox" id="auto-advance" checked> 완료 결과 확인 후 자동 진행</label><div class="control-actions"><button id="start-order" class="control-primary" disabled>주문 시작</button><button id="next-stage" disabled>다음 단계</button><button id="pause-order" disabled>단계 후 일시정지</button></div><p class="subtle pause-note">일시정지는 동작 완료 후 적용 · 즉시 정지는 각 장치의 정지 버튼 · 제작공정 리니어 제외</p><p id="order-selection" class="order-selection visually-hidden">A제품 · 2개 선택</p><p id="order-id" class="subtle visually-hidden">주문 ID —</p><div class="order-progress"><div class="stage-line"><span>완료 단계</span><strong id="stage-number">—</strong></div><p id="stage-label" class="subtle">—</p></div><div class="counters"><div><span>운송 잔여</span><strong id="transport-count">—</strong></div><div><span>완제품 잔여</span><strong id="product-count">—</strong></div><div><span>적재 완료</span><strong id="completed-count">—</strong></div></div><p id="command-note" class="subtle">Host 어댑터의 작업 결과를 기다립니다.</p></section>
-<section class="control-card device-card" aria-labelledby="device-heading"><div class="card-head"><div><p class="eyebrow">DEVICES</p><h2 id="device-heading">장치 통신 상태</h2></div><div class="control-host-connection"><strong>Host</strong><span class="device-connection" data-device-connection="host" data-state="waiting" role="status"><i class="connection-dot" aria-hidden="true"></i><span class="connection-text">확인 중</span></span></div></div><p class="connection-note" data-connection-note>장치 제어 서버 감지 기준 · 제작공정은 로봇팔 2·3 기준</p><div id="device-list" class="device-list"></div></section>
+
+<section class="control-card device-card" aria-labelledby="device-heading"><div class="card-head"><div><p class="eyebrow">DEVICES</p><h2 id="device-heading">장치 제어</h2></div><div class="control-host-connection"><strong>Host</strong><span class="device-connection" data-device-connection="host" data-state="waiting" role="status"><i class="connection-dot" aria-hidden="true"></i><span class="connection-text">확인 중</span></span></div></div><p class="connection-note" data-connection-note>장치 제어 서버 감지 기준 · 제작공정은 로봇팔 2·3 기준</p><div id="device-list" class="device-list"></div></section>
 <section class="control-card condition-card" aria-labelledby="condition-heading"><div class="card-head"><div><p class="eyebrow">INTERLOCK</p><h2 id="condition-heading">다음 단계 조건</h2></div><span id="advance-tag">확인 대기</span></div><ul id="condition-list" class="condition-list"><li>Host의 완료 조건 보고를 기다립니다.</li></ul></section>
 <section class="control-card log-card" aria-labelledby="log-heading"><div class="card-head"><div><p class="eyebrow">HOST LOG</p><h2 id="log-heading">Host 로그</h2></div><button id="host-log" class="log-button" type="button" aria-label="Host 로그 보기">로그 보기 ↗</button></div><p id="host-log-summary" class="log-summary">수신한 Host 로그가 없습니다.</p></section>
 </div>
 </div>
-<p class="control-footnote">통신 연결 ≠ 동작 준비 완료 · 주문 전 초기 배치와 장비 준비를 확인하세요. <a href="HOST_CONTROL_GUIDE.md">연결 계약·실행 안내 ↗</a></p>
+
 </main>
+<dialog id="full-reset-dialog" aria-labelledby="full-reset-title">
+<form id="full-reset-form"><h2 id="full-reset-title">전체 초기화</h2>
+<label><input id="full-reset-parked" type="checkbox"> M1·M2를 둘 다 지정 주차 위치·방향에 직접 놓았습니다.</label>
+<p>위 항목을 선택하면 M1·M2의 주차 위치 기준 위치 추정·Nav2 준비를 먼저 확인하고 팔·리니어를 복귀시킵니다. M1·M2 주차 이동은 보내지 않습니다. 다른 곳에 있는 로봇에는 선택하지 마세요.</p>
+<p>선택하지 않으면 팔1 초기 자세 → 팔2·3 저장 자세 → 리니어 바깥쪽 위치 → M1 주차 → M2 주차 순서로 실제 움직입니다. 모두 완료되면 기존 주문을 기록에 보관하고 비웁니다.</p>
+<p>도킹 중단으로 출차가 금지되거나 한 단계라도 실패하면 다음 장치를 움직이지 않습니다. 위 주차 위치 확인 항목을 선택한 경우에만 위치 추정값을 주차 좌표로 다시 설정합니다.</p>
+<label><input id="full-reset-confirmed" type="checkbox" required> 모든 장치와 리니어가 멈췄고, 팔의 복귀 공간·주차 경로가 비어 있으며 자재와 집게 상태가 복귀에 적합함을 확인했습니다.</label>
+<p id="full-reset-note" role="status"></p><div class="reset-actions"><button id="cancel-full-reset" type="button">취소</button><button id="confirm-full-reset" type="submit">확인 후 전체 초기화</button></div></form></dialog>
 <dialog id="reset-dialog" aria-labelledby="reset-title">
 <form id="reset-form">
 <h2 id="reset-title">실패 주문 초기화</h2>
@@ -33,6 +43,15 @@
 <label><input id="reset-confirmed" type="checkbox" required> 모든 로봇과 리니어가 멈추고 작업이 끝났으며, 초기 배치와 자재 상태를 현장에서 확인했습니다.</label>
 <p id="reset-dialog-note" role="status"></p>
 <div class="reset-actions"><button id="cancel-reset" type="button">취소</button><button id="confirm-reset" type="submit">확인 후 초기화</button></div>
+</form>
+</dialog>
+<dialog id="parked-dialog" aria-labelledby="parked-title">
+<form id="parked-form">
+<h2 id="parked-title">주차 위치로 옮긴 후 준비</h2>
+<p>선택한 로봇의 현재 위치를 지정 주차 좌표로 설정하고, 센서·위치·모터 토크를 준비하며 정지 잠금을 해제합니다. 이동 목적지는 보내지 않습니다.</p>
+<label><input id="parked-confirmed" type="checkbox" required> 해당 로봇을 지정 주차 위치와 방향에 맞춰 놓고 전원을 켰으며, 모든 작업이 끝나고 주변 작업 공간이 비어 있음을 확인했습니다.</label>
+<p id="parked-note" role="status"></p>
+<div class="reset-actions"><button id="cancel-parked" type="button">취소</button><button id="confirm-parked" type="submit">확인 후 준비</button></div>
 </form>
 </dialog>
 <dialog id="recovery-dialog" aria-labelledby="recovery-title">
@@ -53,13 +72,13 @@
 <dialog id="robot-panel-dialog" class="robot-panel-dialog" aria-label="M1·M2 로봇 제어"><button type="button" aria-label="로봇 화면 닫기">닫기 ×</button><iframe title="M1·M2 로봇 제어"></iframe></dialog>
 <script src="assets/robot-panel/open.js?v=20261019-control-popup"></script>
 <script src="robot-stop-client.js?v=20261019-order-reset"></script>
-<script src="robot-stop.js?v=20261019-order-reset"></script>
+<script src="robot-stop.js?v=20261020-full-reset"></script>
 <script src="robot-battery-client.js?v=20261011-battery"></script>
 <script src="robot-battery.js?v=20261011-battery"></script>
 <script src="assets/control/combined-reset.js?v=20261019-order-reset"></script>
-<script src="control.js?v=20261020-parallel-process"></script>
+<script src="control.js?v=20261021-compact"></script>
 <script src="assets/control/cell-error-reset.js?v=20261020-cell-clear"></script>
-<script src="assets/control/cell-controls.js?v=20261020-cell-clear"></script>
+<script src="assets/control/cell-controls.js?v=20261021-compact"></script>
 <script src="device-connection-client.js?v=20261019-discovery-stream"></script>
 <script src="device-connection.js?v=20261011-connection"></script>
 <script src="usage-modal.js?v=20261019-layout-scale"></script></body></html>

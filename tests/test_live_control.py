@@ -25,6 +25,73 @@ def order(status='waiting', stage=1):
 
 
 class LiveControlTest(unittest.TestCase):
+    def test_manual_move_availability_is_per_robot_and_stale_reports_lock(self):
+        now=[0];live=LiveControl('secret',clock=lambda:now[0])
+        data=report();data.update(can_manual_move=True,manual_move_available={'M1':False,'M2':True},manual_revision=2)
+        live.update(data,'secret')
+        payload=dict(order_id=None,stage=0,recovery_revision=2,operator_confirmed=True,destination='GO_TO_MAT')
+        self.assertEqual(live.state()['manual_move_available'],{'M1':False,'M2':True})
+        with self.assertRaises(ValueError):live.issue('manual_move',dict(payload,device='M1'))
+        live.issue('manual_move',dict(payload,device='M2'))
+        self.assertEqual(live.pending('secret')[0]['device'],'M2')
+        self.assertFalse(any(live.state()['manual_move_available'].values()))
+        now[0]=10
+        self.assertFalse(any(live.state()['manual_move_available'].values()))
+    def test_full_reset_parking_confirmation_forwarded_only_as_boolean_in_hardware(self):
+        live=LiveControl('secret')
+        data=report();data.update(can_full_reset=True,manual_revision=8,runtime_mode='hardware',supports_parked_full_reset=True)
+        live.update(data,'secret')
+        payload=dict(order_id=None,recovery_revision=8,operator_confirmed=True)
+        for flag in ('true',1,None):
+            with self.assertRaises(ValueError):live.issue('full_reset',dict(payload,amrs_parked=flag))
+        live.issue('full_reset',dict(payload,amrs_parked=True))
+        self.assertIs(live.pending('secret')[0]['amrs_parked'],True)
+        live=LiveControl('secret');data['runtime_mode']='mock';live.update(data,'secret')
+        with self.assertRaises(ValueError):live.issue('full_reset',dict(payload,amrs_parked=True))
+        live=LiveControl('secret');data['runtime_mode']='hardware'
+        data.pop('supports_parked_full_reset');live.update(data,'secret')
+        with self.assertRaises(ValueError):live.issue('full_reset',dict(payload,amrs_parked=True))
+
+    def test_full_reset_requires_current_context_and_exclusive_queue(self):
+        live = LiveControl('secret')
+        data = report(); data.update(can_full_reset=True, manual_revision=8)
+        live.update(data, 'secret')
+        payload = dict(order_id=None, recovery_revision=8, operator_confirmed=True)
+        for patch in (dict(operator_confirmed=False), dict(recovery_revision=7),
+                      dict(order_id='old'), dict(recovery_revision=True)):
+            with self.assertRaises(ValueError): live.issue('full_reset', dict(payload, **patch))
+        live.issue('full_reset', payload)
+        self.assertEqual(live.pending('secret')[0]['action'], 'full_reset')
+        self.assertFalse(live.state()['can_full_reset'])
+        with self.assertRaises(ValueError): live.issue('full_reset', payload)
+
+    def test_full_reset_defaults_disabled_and_cancel_requires_job_identity(self):
+        live = LiveControl('secret'); live.update(report(), 'secret')
+        self.assertFalse(live.state()['can_full_reset'])
+        with self.assertRaises(ValueError):
+            live.issue('full_reset', dict(order_id=None, recovery_revision=0, operator_confirmed=True))
+        data = report(2); data['full_reset'] = dict(id='init-1', status='running')
+        live.update(data, 'secret')
+        with self.assertRaises(ValueError): live.issue('cancel_full_reset', dict(reset_id='old'))
+        live.issue('cancel_full_reset', dict(reset_id='init-1'))
+        self.assertEqual(live.pending('secret')[0]['reset_id'], 'init-1')
+
+    def test_parked_prepare_requires_confirmation_context_and_exclusivity(self):
+        live = LiveControl('secret')
+        data = report()
+        data.update(can_prepare_parked=True, runtime_mode='hardware', manual_revision=3)
+        live.update(data, 'secret')
+        payload = dict(device='M2', order_id=None, recovery_revision=3, operator_confirmed=True)
+        for patch in (dict(device='arm1'), dict(operator_confirmed=False),
+                      dict(recovery_revision=2), dict(order_id='old')):
+            with self.assertRaises(ValueError):
+                live.issue('prepare_parked', dict(payload, **patch))
+        live.issue('prepare_parked', payload)
+        self.assertEqual(live.pending('secret')[0]['device'], 'M2')
+        self.assertFalse(live.state()['can_prepare_parked'])
+        with self.assertRaises(ValueError):
+            live.issue('prepare_parked', payload)
+
     def test_idle_manual_requires_current_context_and_blocks_duplicate(self):
         live=LiveControl('secret')
         data=report();data.update(can_manual_move=True,manual_revision=2)
@@ -215,7 +282,8 @@ class LiveControlTest(unittest.TestCase):
         thread.start()
         try:
             base = f'http://127.0.0.1:{server.server_port}'
-            self.assertIn(b'HOST PC', urlopen(base+'/control.html').read())
+            self.assertIn(b'id="device-list"', urlopen(base+'/control.html').read())
+            self.assertEqual(urlopen(base+'/assets/control/layout.css').status, 200)
             self.assertIn(b'control-grid', urlopen(base+'/control.css').read())
             self.assertIn(b'/api/live/state', urlopen(base+'/control.js').read())
             def post(path, data, token=None):
