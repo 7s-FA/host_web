@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict');
+const {create}=require('../assets/control/workcell-session.js');
+let t=0,n=0;const lease=create({now:()=>t,uuid:()=>String(++n).padStart(32,'0')});
+const challenge=(epoch='e',nonce='n')=>lease.receive(JSON.stringify({kind:'challenge',epoch,nonce}));
+const ack=(client_id='1'.padStart(32,'0'),epoch='e',nonce='n')=>lease.receive(JSON.stringify({kind:'ack',client_id,epoch,nonce}));
+assert.throws(()=>lease.encode('CLEAR_ERROR'));assert.equal(lease.encode('EMER_STOP'),'EMER_STOP');
+challenge();ack('wrong');assert.equal(lease.ready(),false);ack();assert.equal(lease.ready(),true);
+const goal=JSON.parse(lease.encode('CLEAR_ERROR'));assert.equal(goal.version,2);assert.notEqual(goal.request_id,goal.attempt_id);
+t=1000;challenge();ack();t=1600;assert.equal(lease.ready(),false);ack();assert.equal(lease.ready(),false);
+challenge('new','x');ack(undefined,'new','x');assert.equal(lease.ready(),true);lease.reset();assert.equal(lease.ready(),false);
+for(const text of ['bad','null','[]','{}'])assert.equal(lease.receive(text),null);
+console.log('PASS V2 web handshake, expiry, replay, reconnect and command envelope');

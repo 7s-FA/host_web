@@ -137,3 +137,10 @@
 .robot-panel-dialog{width:min(1200px,96vw);height:92dvh;max-height:96dvh;padding:0;border:0;border-radius:12px;overflow:hidden}.robot-panel-dialog::backdrop{background:#142c42a6}.robot-panel-dialog>button{position:absolute;right:14px;top:10px;z-index:2;border:1px solid #ccd8df;border-radius:8px;padding:7px 14px;background:#fff;cursor:pointer}.robot-panel-dialog iframe{width:100%;height:100%;border:0}.cell-control{border-top:1px solid #d6e0e6;margin-top:12px;padding-top:8px}.cell-control p{font-size:10px;line-height:1.5;margin:5px 0}.cell-control button{font-size:11px;padding:7px 4px}.cell-control .cell-controls{display:grid;grid-template-columns:1fr 1fr;gap:5px}.cell-control .cell-stop{color:#a63131;border:1px solid #bd5353;background:#fff7f7}.cell-control .cell-release{color:#315f70;border:1px solid #8caab4;background:#f3f8fa}.cell-control [data-phase=error]{color:#a63131}.cell-control [data-phase=success]{color:#21704c}
 
 #full-reset-dialog{max-width:560px;border:1px solid #cbd5e1;border-radius:16px;padding:28px}#full-reset-dialog::backdrop{background:#10203088}#full-reset-dialog p{line-height:1.65}#full-reset-dialog label{display:block;line-height:1.6}.full-reset-status{margin-bottom:16px;border-left:4px solid #d79524}.full-reset-status[hidden]{display:none}
+/* Mixed-product orders and explicit pallet handoff. */
+#mixed-order-fields[hidden],#order-queue-panel[hidden],[data-legacy-order][hidden]{display:none!important}
+#mixed-order-fields .choice-buttons{display:flex;gap:16px}#mixed-order-fields label{display:flex;align-items:center;gap:10px;font-weight:700}
+#mixed-order-fields select{min-width:70px;padding:9px;border:1px solid #b4c7d2;border-radius:7px;background:white;font-size:16px}
+#order-queue-panel{grid-column:1/-1;border-top:1px solid #d7e1e7;padding-top:8px}#order-queue-summary{font-size:13px;overflow-wrap:anywhere}
+#batch-dialog{max-width:500px;border:1px solid #cbd5e1;border-radius:14px;padding:24px}#batch-dialog::backdrop{background:#10203088}#batch-dialog label{display:block;line-height:1.7}
+#mixed-order-fields label{white-space:nowrap;flex-shrink:0}#mixed-order-fields{min-width:230px}

@@ -1,22 +1,16 @@
 const assert=require('node:assert/strict');
 const {run}=require('../assets/control/combined-reset.js');
-const initial=()=>({bridge_connected:true,can_reset:true,pending_commands:0,order:{id:'order',status:'failed',stage:3,recovery_revision:2}});
+const initial=()=>({bridge_connected:true,can_retry:true,pending_commands:0,order:{id:'order',status:'failed',stage:3,recovery_revision:2,completed:1}});
 (async()=>{
  for(const robot of ['M1','M2']){
-  let state=initial(),time=0,events=[];
-  const result=await run({robot,orderId:'order',stage:3,revision:2,read:async()=>state,
-   reset:async payload=>{events.push(['reset',payload]);state={...state,order:null};},
-   release:async name=>{events.push(['release',name]);return {success:true};},now:()=>time,delay:async ms=>time+=ms});
-  assert.match(result,/초기화 완료/);assert.deepEqual(events.map(x=>x[0]),['reset','release']);
-  assert.equal(events[0][1].order_id,'order');
+  let s=initial(),events=[];const before=JSON.stringify(s.order);
+  const result=await run({robot,orderId:'order',stage:3,revision:2,read:async()=>s,reset:async()=>{throw Error('must not reset');},release:async name=>{events.push(name);return {success:true};}});
+  assert.match(result,/다음 단계로 재시도/);assert.deepEqual(events,[robot]);assert.equal(JSON.stringify(s.order),before);
  }
- for(const failure of ['changed','offline','timeout','release-failed','new-order']){
-  let state=initial(),time=0,releases=0,reads=0;
-  await assert.rejects(run({robot:'M1',orderId:'order',stage:failure==='changed'?4:3,revision:2,
-   read:async()=>{reads++;if(failure==='new-order'&&reads===3)return {...state,order:{id:'new'}};return state;},
-   reset:async()=>{if(failure==='offline')state.bridge_connected=false;else if(failure!=='timeout')state.order=null;},
-   release:async()=>{releases++;return {success:false,message:'rejected'};},now:()=>time,delay:async ms=>time+=ms}));
-  assert.equal(releases,failure==='release-failed'?1:0,failure);
+ for(const fault of ['changed','offline','unconfirmed','release-failed','new-order']){
+  let s=initial(),reads=0,releases=0;if(fault==='offline')s.bridge_connected=false;if(fault==='unconfirmed')s.can_retry=false;
+  await assert.rejects(run({robot:'M1',orderId:'order',stage:fault==='changed'?4:3,revision:2,read:async()=>{if(++reads===2&&fault==='new-order')s.order.id='new';return s;},release:async()=>{releases++;return {success:false};}}));
+  assert.equal(releases,fault==='release-failed'?1:0);
  }
- console.log('PASS: failed-order acknowledgement precedes unlock; stale order, disconnect, timeout, new order and partial failure stop the sequence');
+ console.log('PASS AMR unlock preserves checkpoint; unconfirmed/stale/disconnected state blocks release');
 })().catch(e=>{console.error(e);process.exit(1)});

@@ -60,6 +60,14 @@ class LiveControl:
             'manual_revision': report.get('manual_revision', 0) if report else 0,
             'can_full_reset': bool(report and report.get('can_full_reset') and not self.commands),
             'full_reset': report.get('full_reset') if report else None,
+            'movement_reset_available': {d: bool(report and not self.commands and report.get('movement_reset_available', {}).get(d)) for d in ('M1', 'M2')},
+            'supports_order_queue': bool(report and report.get('supports_order_queue')),
+            'supports_continuous_orders': bool(report and report.get('supports_continuous_orders')),
+            'remaining_capacity': report.get('remaining_capacity', {'A':2,'B':2}) if report else {'A':2,'B':2},
+            'pending_batches': report.get('pending_batches', []) if report else [],
+            'queue_revision': report.get('queue_revision', 0) if report else 0,
+            'can_enqueue': bool(report and not self.commands and report.get('can_enqueue')),
+            'can_next_batch': bool(report and not self.commands and report.get('can_next_batch')),
             'supports_parked_full_reset': bool(report and report.get('supports_parked_full_reset')),
             'log': (self.report['log'] if self.report else []) + list(self.log),
             'latest_event': self.report['log'][-1] if self.report and self.report['log'] else (self.log[-1] if self.log else ''),
@@ -99,7 +107,8 @@ class LiveControl:
                 raise ValueError('제품은 A 또는 B여야 합니다.')
             for key in ('quantity', 'transport_remaining', 'product_remaining', 'completed', 'stage', 'stage_count'):
                 value = order.get(key)
-                if type(value) is not int or value < 0 or value > (100 if key in ('stage', 'stage_count') else self.order_policy['quantity_max']):
+                maximum = 4 if order.get('plan_mode') == 'continuous-v1' else self.order_policy['quantity_max']
+                if type(value) is not int or value < 0 or value > (100 if key in ('stage', 'stage_count') else maximum):
                     raise ValueError(f'주문 {key} 형식 오류')
             if not isinstance(order.get('id', ''), str):
                 raise ValueError('주문 ID 형식 오류')
@@ -107,8 +116,15 @@ class LiveControl:
             if type(revision) is not int or revision < 0:
                 raise ValueError('복구 revision 형식 오류')
             extra = {'recovery_revision': revision}
+            if 'products' in order:
+                products = order['products']
+                if not isinstance(products, list) or len(products) != order['quantity'] or any(p not in ('A', 'B') for p in products):
+                    raise ValueError('묶음 제품 형식 오류')
+                extra['products'] = list(products)
+                if order.get('plan_mode') == 'continuous-v1' and any(products.count(p)>2 for p in ('A','B')):
+                    raise ValueError('A 최대 2개·B 최대 2개입니다.')
             if 'plan_mode' in order:
-                if order['plan_mode'] != 'parallel-v1':
+                if order['plan_mode'] not in ('parallel-v1','continuous-v1'):
                     raise ValueError('지원하지 않는 공정 계획 버전')
                 extra['plan_mode'] = order['plan_mode']
             for key in ('auto_advance', 'pause_requested'):
@@ -160,7 +176,26 @@ class LiveControl:
         self.commands = deque((c for c in self.commands if c['id'] not in accepted), maxlen=32)
         if order is not None:
             self.start_in_flight = False
-        self.report = {'devices': normalized, 'order': order, 'conditions': clean_conditions,
+        batches = report.get('pending_batches', [])
+        queue_revision = report.get('queue_revision', 0)
+        if not isinstance(batches, list) or len(batches) > 32 or type(queue_revision) is not int or queue_revision < 0:
+            raise ValueError('대기 주문 형식 오류')
+        for batch in batches:
+            if (not isinstance(batch, dict) or not isinstance(batch.get('products'), list)
+                    or not 1 <= len(batch['products']) <= 2 or any(p not in ('A', 'B') for p in batch['products'])):
+                raise ValueError('대기 묶음 형식 오류')
+        capacity = report.get('remaining_capacity', {'A':2,'B':2})
+        if (not isinstance(capacity,dict) or set(capacity) != {'A','B'}
+                or any(type(v) is not int or not 0<=v<=2 for v in capacity.values())):
+            raise ValueError('추가 가능한 수량 형식 오류')
+        self.report = {'supports_order_queue': report.get('supports_order_queue') is True,
+                       'supports_continuous_orders': report.get('supports_continuous_orders') is True,
+                       'remaining_capacity': dict(capacity),
+                       'pending_batches': [{'products': list(b['products'])} for b in batches],
+                       'queue_revision': queue_revision, 'can_enqueue': report.get('can_enqueue') is True,
+                       'can_next_batch': report.get('can_next_batch') is True,
+                       'movement_reset_available': {d: (report.get('movement_reset_available') or {}).get(d) is True for d in ('M1', 'M2')},
+                       'devices': normalized, 'order': order, 'conditions': clean_conditions,
                        'can_advance': report['can_advance'], 'log': [x[:200] for x in entries],
                        'can_start': report.get('can_start', True) is True,
                        'can_reset': report.get('can_reset', False) is True,
@@ -187,7 +222,44 @@ class LiveControl:
         if self.commands:
             raise ValueError('이전 지시의 수락을 기다리는 중입니다.')
         order = self.report['order']
-        if action == 'start':
+        if action == 'reset_movement':
+            device = payload.get('device')
+            if (not self.report['movement_reset_available'].get(device) or payload.get('operator_confirmed') is not True
+                    or payload.get('order_id') != (order or {}).get('id')
+                    or type(payload.get('recovery_revision')) is not int
+                    or payload['recovery_revision'] != self.report['manual_revision']):
+                raise ValueError('로봇 정지·현재 작업·연결 상태를 다시 확인하세요.')
+            command = dict(action=action, device=device, order_id=(order or {}).get('id'),
+                           recovery_revision=payload['recovery_revision'], operator_confirmed=True)
+        elif action in ('enqueue', 'next_batch', 'clear_queue') or (action == 'start' and 'quantities' in payload):
+            if not self.report.get('supports_order_queue'):
+                raise ValueError('주문 대기열을 지원하는 Host로 갱신해야 합니다.')
+            if action in ('start', 'enqueue'):
+                quantities = payload.get('quantities')
+                if (not isinstance(quantities, dict) or set(quantities) != {'A', 'B'}
+                        or any(type(v) is not int or not 0 <= v <= 2 for v in quantities.values())
+                        or sum(quantities.values()) == 0):
+                    raise ValueError('A·B 각각 0~2개, 합계 1개 이상 선택하세요.')
+                flag = 'can_start' if action == 'start' else 'can_enqueue'
+                if not self.report.get(flag) or self.start_in_flight:
+                    raise ValueError('주문 접수 상태를 확인하세요.')
+                if action == 'enqueue' and self.report.get('supports_continuous_orders'):
+                    if any(quantities[p]>self.report['remaining_capacity'][p] for p in ('A','B')):
+                        raise ValueError('추가 주문을 포함해 A 최대 2개·B 최대 2개입니다.')
+                automatic = payload.get('auto_advance', True)
+                if type(automatic) is not bool:
+                    raise ValueError('auto_advance 형식 오류')
+                command = dict(action=action, quantities=quantities, auto_advance=automatic)
+            else:
+                if (payload.get('operator_confirmed') is not True
+                        or payload.get('order_id') != (order or {}).get('id')
+                        or type(payload.get('queue_revision')) is not int
+                        or payload['queue_revision'] != self.report['queue_revision']
+                        or (action == 'next_batch' and not self.report.get('can_next_batch'))):
+                    raise ValueError('현재 묶음 완료·대기 주문·팔레트 비움 확인이 필요합니다.')
+                command = dict(action=action, order_id=(order or {}).get('id'), operator_confirmed=True,
+                               queue_revision=payload['queue_revision'])
+        elif action == 'start':
             if not self.report.get('can_start', True):
                 raise ValueError('장치 준비 또는 기존 주문의 복구가 필요합니다.')
             product_type = payload.get('product_type', 'A')

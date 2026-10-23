@@ -25,6 +25,52 @@ def order(status='waiting', stage=1):
 
 
 class LiveControlTest(unittest.TestCase):
+    def test_continuous_four_products_and_cumulative_limit(self):
+        live=LiveControl('secret')
+        active=order(status='running')
+        active.update(plan_mode='continuous-v1',products=['A','B','A'],quantity=3,
+                      product_remaining=3,transport_remaining=3)
+        data=report(order=active)
+        data.update(supports_order_queue=True,supports_continuous_orders=True,
+                    can_start=False,can_enqueue=True,remaining_capacity={'A':0,'B':1})
+        live.update(data,'secret')
+        self.assertTrue(live.state()['supports_continuous_orders'])
+        self.assertEqual(live.state()['remaining_capacity'],{'A':0,'B':1})
+        for quantities in ({'A':1,'B':0},{'A':0,'B':2}):
+            with self.assertRaises(ValueError):live.issue('enqueue',dict(quantities=quantities))
+        live.issue('enqueue',dict(quantities={'A':0,'B':1}))
+        active.update(products=['A','B','A','B'],quantity=4,product_remaining=4,transport_remaining=4)
+        data.update(revision=2,remaining_capacity={'A':0,'B':0},can_enqueue=False)
+        live.update(data,'secret')
+        self.assertEqual(live.state()['order']['quantity'],4)
+        active['products']=['A','A','A','B']
+        with self.assertRaises(ValueError):live.update(dict(data,revision=3),'secret')
+
+    def test_queue_capabilities_and_validation(self):
+        live=LiveControl('secret')
+        data=report();data.update(supports_order_queue=True,can_enqueue=True,can_next_batch=True,
+                                 queue_revision=3,pending_batches=[{'products':['A','B']}])
+        live.update(data,'secret')
+        for quantities in ({'A':True,'B':0},{'A':3,'B':1},{'A':0,'B':0}):
+            with self.assertRaises(ValueError):live.issue('enqueue',dict(quantities=quantities))
+        live.issue('enqueue',dict(quantities={'A':2,'B':2}))
+        self.assertEqual(live.pending('secret')[0]['quantities'],{'A':2,'B':2})
+        self.assertFalse(live.state()['can_enqueue'])
+        live.update(dict(data,revision=2,accepted_command_ids=[live.pending('secret')[0]['id']]),'secret')
+        with self.assertRaises(ValueError):live.issue('next_batch',dict(order_id=None,queue_revision=2,operator_confirmed=True))
+        live.issue('next_batch',dict(order_id=None,queue_revision=3,operator_confirmed=True))
+
+    def test_movement_reset_does_not_require_failed_order_and_rejects_stale_view(self):
+        live=LiveControl('secret')
+        data=report();data.update(movement_reset_available={'M1':False,'M2':True},manual_revision=9)
+        live.update(data,'secret')
+        payload=dict(device='M2',order_id=None,recovery_revision=9,operator_confirmed=True)
+        with self.assertRaises(ValueError):live.issue('reset_movement',dict(payload,recovery_revision=8))
+        with self.assertRaises(ValueError):live.issue('reset_movement',dict(payload,device='M1'))
+        live.issue('reset_movement',payload)
+        self.assertEqual(live.pending('secret')[0]['action'],'reset_movement')
+        self.assertFalse(live.state()['movement_reset_available']['M2'])
+
     def test_manual_move_availability_is_per_robot_and_stale_reports_lock(self):
         now=[0];live=LiveControl('secret',clock=lambda:now[0])
         data=report();data.update(can_manual_move=True,manual_move_available={'M1':False,'M2':True},manual_revision=2)

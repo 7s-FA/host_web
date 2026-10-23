@@ -9,7 +9,7 @@
  const productButtons=[...document.querySelectorAll('[data-product-type]')],quantityButtons=[...document.querySelectorAll('[data-quantity]')];
  const canMove=(data,device)=>data?.manual_move_available?.[device]??data?.can_manual_move;
  const destinations={GO_TO_MAT:'자재창고',GO_TO_ASM:'조립대',GO_TO_REST:'대기장소',GO_TO_PARK:'지정 주차장'};
- let fullResetSelection=null,layoutMode=null;
+ let fullResetSelection=null,layoutMode=null,batchSelection=null;
  let recovery=null,parkedSelection=null,autoDraftKey=null,resetRobot=null,resetSelection=null,robotControls=null,resetOutcome='';
  $('auto-advance').checked=true;
  let resetOrderId=null,current=null,busy=false,polling=false,productType='A',quantity=2,selectionInitialized=false,logTarget='host',logSignature='';
@@ -35,8 +35,8 @@
    status.className='robot-stop-status';status.dataset.stopStatus=key;status.setAttribute('role','status');status.textContent='정지 연결 확인 중';
    const errorReset=document.createElement('button');
    errorReset.type='button';errorReset.className='robot-error-reset-button';errorReset.dataset.errorResetRobot=key;
-   errorReset.textContent='이동 오류 초기화';errorReset.setAttribute('aria-label',key+' 이동 오류 초기화');errorReset.disabled=true;
-   errorReset.title='해당 로봇의 오류 잠금과 실패 주문을 함께 초기화합니다.';
+   errorReset.textContent='이동 초기화';errorReset.setAttribute('aria-label',key+' 이동 초기화');errorReset.disabled=true;
+   errorReset.title='해당 로봇의 오류 잠금만 해제하고 실패 단계와 완료 수량을 유지합니다.';
    errorReset.onclick=()=>openReset(key);
    controls.append(label,buttons,status);item.append(controls);
    const move=document.createElement('div'),select=document.createElement('select'),send=document.createElement('button'),hint=document.createElement('p');
@@ -113,8 +113,8 @@
   $('parked-note').textContent=prepareAllowed&&parkedCurrent?'선택한 로봇만 준비합니다.':'주문·연결·작업 상태가 변경됐습니다. 창을 닫고 다시 확인하세요.';
   for(const key of ['M1','M2']){
    const button=document.querySelector(`[data-error-reset-robot="${key}"]`);
-   button.disabled=!data.bridge_connected||busy||data.pending_commands>0||!data.can_reset||!robotControls?.robots[key]?.canRestart;
-   button.title=button.disabled?'실패 주문·장치 연결·작업 종료 확인 후 사용':'실패 주문 초기화 후 해당 로봇 정지 잠금 해제 · 자동 이동 없음';
+   button.disabled=!data.bridge_connected||busy||data.pending_commands>0||!(data.movement_reset_available?.[key]);
+   button.title=button.disabled?'작업 종료·Host 연결 확인 후 사용':'남은 이동 작업·정지 잠금 해제 · 위치 좌표 유지';
   }
   const connected=!!data.bridge_connected,order=data.order;
   $('bridge-pill').textContent=connected?(data.manual_inspection?'수동 점검':data.runtime_mode==='mock'?'모의 장치 · 실물 연결 없음':'실물 관제 · 연결됨'):data.bridge_configured?'ROS Host 보고 끊김':'ROS Host 어댑터 미설정';
@@ -126,8 +126,31 @@
   const status=order?.status||'idle',locked=busy||data.pending_commands>0||!!order&&!['idle','done'].includes(status);
   if(order&&!['idle','done'].includes(status)){productType=order.product_type||'A';quantity=order.quantity;}
   paintSelection(locked);
-  $('auto-advance').disabled=locked;
-  if(connected){
+  const queued=!!data.supports_order_queue;
+  for(const field of document.querySelectorAll('[data-legacy-order]'))field.hidden=queued;
+  $('mixed-order-fields').hidden=!queued;
+  const continuous=!!data.supports_continuous_orders;
+  for(const p of ['A','B']){
+   const field=$('quantity-'+p),limit=continuous&&!data.can_start?(data.remaining_capacity?.[p]??0):2;
+   for(const option of field.options)option.disabled=Number(option.value)>limit;
+   if(Number(field.value)>limit)field.value=String(limit);
+   field.disabled=busy||!!data.pending_commands||!connected||!(data.can_start||data.can_enqueue)||limit===0;
+  }
+  $('order-queue-panel').hidden=!queued;
+  const batches=data.pending_batches||[];
+  $('order-queue-summary').textContent=(order?'현재 묶음 '+(order.products||Array(order.quantity).fill(order.product_type)).join(' + ')+' · ':'')+(batches.length?'대기 '+batches.reduce((n,b)=>n+b.products.length,0)+'개 · '+batches.map((b,i)=>(i+1)+'차 '+b.products.join(' + ')).join(' → '):'대기 주문 없음');
+  if(continuous){
+   $('order-queue-summary').textContent=(order?'주문 '+(order.products||[]).join(' → '):'새 주문')+(batches.length?' · 이전 방식의 대기 주문 '+batches.reduce((n,b)=>n+b.products.length,0)+'개가 남아 있습니다. 삭제 후 새 주문을 시작하세요.':'');
+   $('order-limit-note').textContent='A 최대 2개 · B 최대 2개 · '+(data.can_enqueue?'추가 가능 A '+data.remaining_capacity.A+'개 / B '+data.remaining_capacity.B+'개':'최대 4개 연속 생산');
+  }
+  $('next-batch').hidden=continuous;
+  $('clear-queue').hidden=continuous&&!batches.length;
+  $('clear-queue').textContent=continuous?'이전 대기 주문 삭제':'대기 주문 삭제';
+  $('next-batch').disabled=busy||!!data.pending_commands||!connected||!data.can_next_batch;
+  $('clear-queue').disabled=busy||!!data.pending_commands||!connected||!batches.length;
+  $('batch-confirm').disabled=$('next-batch').disabled||!$('batch-confirmed').checked||!batchSelection||batchSelection.queue_revision!==data.queue_revision||batchSelection.order_id!==(order?.id??null);
+  $('auto-advance').disabled=queued?(busy||!!data.pending_commands):locked;
+  if(connected&&!queued){
    if(order&&!['idle','done'].includes(status)){
     $('auto-advance').checked=order.auto_advance!==false;autoDraftKey=null;
    }else{
@@ -141,10 +164,10 @@
   $('stage-label').textContent=order?.stage_label||'—';
   $('transport-count').textContent=order?.transport_remaining??'—';$('product-count').textContent=order?.product_remaining??'—';$('completed-count').textContent=order?.completed??'—';
   $('retry-order').hidden=status!=='failed';
-  $('retry-order').disabled=!connected||busy||data.pending_commands>0||!data.can_retry;
+  $('retry-order').disabled=!!window.hostDeviceErrorResetBusy||!connected||busy||data.pending_commands>0||!data.can_retry;
   const sameRecovery=recovery&&(order?.id??null)===recovery.order_id&&(order?.stage??0)===recovery.stage
    &&(order?order.recovery_revision||0:data.manual_revision||0)===recovery.recovery_revision;
-  const recoveryAllowed=connected&&!busy&&!data.pending_commands&&sameRecovery&&(recovery.action==='retry'?data.can_retry:canMove(data,recovery.device));
+  const recoveryAllowed=!window.hostDeviceErrorResetBusy&&connected&&!busy&&!data.pending_commands&&sameRecovery&&(recovery.action==='retry'?data.can_retry:canMove(data,recovery.device));
   $('confirm-recovery').disabled=!recoveryAllowed;
   $('recovery-dialog-note').textContent=recoveryAllowed?'': '주문·연결·진행 상태가 변경되었습니다. 창을 닫고 상태를 다시 확인하세요.';
   for(const key of ['M1','M2']){
@@ -160,10 +183,13 @@
   $('reset-order').hidden=status!=='failed';
   $('reset-order').disabled=!connected||busy||data.pending_commands>0||!data.can_reset;
   $('reset-order').title=data.can_reset?'현장 확인 후 실패 주문을 초기화합니다.':'장치 연결 또는 이전 지시 응답 확인 필요';
-  $('confirm-reset').disabled=!connected||busy||!data.can_reset||order?.id!==resetOrderId||(resetRobot&&(!robotControls?.robots[resetRobot]?.canRestart||order?.stage!==resetSelection?.stage||(order?.recovery_revision||0)!==resetSelection?.revision));
-  $('reset-dialog-note').textContent=order?.id!==resetOrderId?'주문이 변경되었습니다. 창을 닫고 다시 확인하세요.':!data.can_reset?'장치 연결 또는 이전 지시 응답을 확인한 뒤 초기화할 수 있습니다.':'';
-  $('start-order').disabled=!connected||locked||data.can_start===false;
-  $('next-stage').disabled=!connected||busy||!data.can_advance;
+  $('confirm-reset').disabled=!connected||busy||!(resetRobot?data.movement_reset_available?.[resetRobot]:data.can_reset)||(order?.id??null)!==resetOrderId||(resetRobot&&data.manual_revision!==resetSelection?.revision);
+  $('reset-dialog-note').textContent=(order?.id??null)!==resetOrderId?'주문이 변경되었습니다. 창을 닫고 다시 확인하세요.':!(resetRobot?data.movement_reset_available?.[resetRobot]:data.can_reset)?'장치 연결 또는 이전 지시 응답을 확인한 뒤 초기화할 수 있습니다.':'';
+  $('start-order').disabled=queued?(!connected||busy||!!data.pending_commands||(!(data.can_start||data.can_enqueue)||Number($('quantity-A').value)+Number($('quantity-B').value)===0)):(!connected||locked||data.can_start===false);
+  $('start-order').textContent=queued&&!data.can_start?'주문 추가':'주문 시작';
+  if(queued&&order)$('order-id').textContent='현재 묶음 · '+(order.products||Array(order.quantity).fill(order.product_type)).join(' + ');
+  $('next-stage').disabled=!!window.hostDeviceErrorResetBusy||!connected||busy||data.pending_commands>0||!(status==='failed'?data.can_retry:data.can_advance);
+  $('next-stage').textContent=status==='failed'?'다음 단계 · 실패 작업 재시도':'다음 단계';
   $('pause-order').disabled=window.hostInitialPreparationBusy||!connected||busy||data.pending_commands>0||order?.pause_requested&&status!=='paused'||!['running','waiting','paused'].includes(status);
   $('pause-order').textContent=status==='paused'?'재개':order?.pause_requested?'현재 동작 완료 대기':'단계 후 일시정지';
   $('command-note').textContent=data.pending_commands?`Host 어댑터 지시 수락 대기 · ${data.pending_commands}건`:order?.plan_mode==='parallel-v1'?'선행 작업 완료 후 병렬 진행 · 공용 통로는 이동로봇 1대만 사용':'';
@@ -200,12 +226,22 @@
  for(const button of productButtons)button.onclick=()=>{productType=button.dataset.productType;paintSelection(false);};
  for(const button of quantityButtons)button.onclick=()=>{quantity=Number(button.dataset.quantity);paintSelection(false);};
  $('start-order').onclick=()=>{
+  if(current?.supports_order_queue){
+   const quantities={A:Number($('quantity-A').value),B:Number($('quantity-B').value)};
+   if(!quantities.A&&!quantities.B)return alert('제품 수량을 1개 이상 선택하세요.');
+   return issue(current.can_start?'start':'enqueue',{quantities,auto_advance:$('auto-advance').checked});
+  }
   const policy=quantityPolicy();
   if(!['A','B'].includes(productType))return alert('A제품 또는 B제품을 선택하세요.');
   if(!Number.isInteger(quantity)||quantity<policy.min||quantity>policy.max)return alert('주문 수량은 1~2 사이의 정수로 선택하세요.');
   issue('start',{product_type:productType,quantity,...($('auto-advance').checked?{}:{auto_advance:false})});
  };
- $('next-stage').onclick=()=>issue('next');
+ $('next-batch').onclick=()=>{if($('next-batch').disabled)return;batchSelection={order_id:current.order?.id??null,queue_revision:current.queue_revision};$('batch-confirmed').checked=false;paint(current);$('batch-dialog').showModal();};
+ $('batch-confirmed').onchange=()=>paint(current);
+ $('batch-cancel').onclick=()=>$('batch-dialog').close();
+ $('batch-confirm').onclick=()=>{if($('batch-confirm').disabled)return;$('batch-dialog').close();issue('next_batch',{...batchSelection,operator_confirmed:true});};
+ $('clear-queue').onclick=()=>{if(!$('clear-queue').disabled&&confirm('진행 중인 묶음은 유지하고 대기 주문만 삭제할까요?'))issue('clear_queue',{order_id:current.order?.id??null,queue_revision:current.queue_revision,operator_confirmed:true});};
+ $('next-stage').onclick=()=>{if($('next-stage').disabled)return;if(current?.order?.status==='failed')openRecovery('retry');else issue('next');};
  $('pause-order').onclick=()=>issue(current?.order?.status==='paused'?'resume':'pause');
  $('host-log').onclick=()=>openLog('host');
  $('full-reset').onclick=()=>{if($('full-reset').disabled)return;fullResetSelection={order_id:current.order?.id??null,recovery_revision:current.manual_revision};$('full-reset-confirmed').checked=false;$('full-reset-parked').checked=false;paint(current);$('full-reset-dialog').showModal();};
@@ -227,7 +263,7 @@
  };
  function openRecovery(action,extra={}){
   const order=current?.order;
-  if(!current||!(action==='retry'?order&&current.can_retry:canMove(current,extra.device)))return;
+  if(window.hostDeviceErrorResetBusy||!current||!(action==='retry'?order&&current.can_retry:canMove(current,extra.device)))return;
   recovery={action,order_id:order?.id??null,stage:order?.stage??0,
    recovery_revision:order?order.recovery_revision||0:current.manual_revision||0,...extra};
   $('recovery-title').textContent=action==='retry'?'실패 단계 재시도':extra.device+' 수동 이동';
@@ -243,16 +279,16 @@
  $('cancel-recovery').onclick=()=>$('recovery-dialog').close();
  $('recovery-form').onsubmit=event=>{
   event.preventDefault();
-  if(!$('recovery-confirmed').checked||$('confirm-recovery').disabled)return;
+  if(window.hostDeviceErrorResetBusy||!$('recovery-confirmed').checked||$('confirm-recovery').disabled)return;
   const {action,...payload}=recovery;$('recovery-dialog').close();issue(action,{...payload,operator_confirmed:true});
  };
  function openReset(robot=null){
-  if(!current?.can_reset||busy||(robot&&!robotControls?.robots[robot]?.canRestart))return;
-  resetRobot=robot;resetOrderId=current.order.id;
-  resetSelection={stage:current.order.stage,revision:current.order.recovery_revision||0};
-  $('reset-title').textContent=robot?robot+' 오류·실패 주문 초기화':'실패 주문 초기화';
-  $('reset-description').textContent=robot?'실패 주문을 기록에 보관하고 비운 뒤 '+robot+'의 정지 잠금을 해제합니다. 둘 다 확인돼야 완료로 표시합니다.':'실패 기록을 보관하고 주문을 비웁니다. 정지 여부가 미확인된 실패 장치는 정지 응답을 받은 뒤 초기화합니다.';
-  $('reset-effect').textContent=robot?'해제 후 자동 이동하지 않습니다. 현재 위치·적재물은 그대로이며 처음부터 시험하려면 초기 배치가 필요합니다.':'로봇 이동·모터 활성화·정지 잠금 해제·주차 좌표 재설정은 하지 않습니다.';
+  if(!(robot?current?.movement_reset_available?.[robot]:current?.can_reset)||busy)return;
+  resetRobot=robot;resetOrderId=current.order?.id??null;
+  resetSelection={revision:current.manual_revision};
+  $('reset-title').textContent=robot?robot+' 이동 초기화':'실패 주문 초기화';
+  $('reset-description').textContent=robot?robot+'의 정지 응답을 확인하고 남은 이동 작업·정지 잠금을 해제합니다. 실패 주문의 단계와 완료 수량은 유지합니다.':'실패 기록을 보관하고 현재 주문과 대기 주문을 비웁니다. 정지 여부가 미확인된 실패 장치는 정지 응답을 받은 뒤 초기화합니다.';
+  $('reset-effect').textContent=robot?'위치 좌표와 Nav2는 재설정하지 않습니다. 새 이동은 별도로 실행하세요.':'로봇 이동·모터 활성화·정지 잠금 해제·주차 좌표 재설정은 하지 않습니다.';
   $('reset-confirmed').checked=false;paint(current);$('reset-dialog').showModal();
  }
  $('reset-order').onclick=()=>openReset();
@@ -263,16 +299,7 @@
   if(!$('reset-confirmed').checked||$('confirm-reset').disabled)return;
   $('reset-dialog').close();
   if(!resetRobot){issue('reset',{order_id:resetOrderId,operator_confirmed:true});return;}
-  const robot=resetRobot,orderId=resetOrderId,selection={...resetSelection};
-  busy=true;resetOutcome='초기화 상태 확인 중';paint(current);
-  const read=async()=>{const response=await fetch('/api/live/state',{cache:'no-store'});if(!response.ok)throw Error('Host 상태 조회 실패');const state=await response.json();paint(state);return state;};
-  try{
-   resetOutcome=await CombinedReset.run({robot,orderId,...selection,read,
-    reset:async payload=>{const response=await fetch('/api/live/reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const result=await response.json();if(!response.ok)throw Error(result.error||'주문 초기화 거절');},
-    release:key=>window.RobotStopControls.release(key),
-    progress:message=>{resetOutcome=message;paint(current);}});
-  }catch(error){resetOutcome=error.message;}
-  finally{busy=false;paint(current);}
+  issue('reset_movement',{device:resetRobot,order_id:resetOrderId,recovery_revision:resetSelection.revision,operator_confirmed:true});
  };
  refresh();setInterval(refresh,1000);
 })();

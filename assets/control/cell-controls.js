@@ -5,6 +5,7 @@
  const cells=[{key:'warehouse',arm:'arm1',title:'팔1',note:'재개 시 중단된 동작이 이어집니다.'},
   {key:'production',arm:'arm2',title:'팔2·3',note:'팔2·3 공동 정지 · 리니어 제외'}];
  let socket=null,connected=false,reconnect=null,closed=false,serial=0,arm1=null,arm1At=0,hostState=null,resetBusy=false,hostPolling=false;
+ const workcell=WorkcellSession.create();
  const requests=new Map(),prefix='cell-'+(crypto.randomUUID?.()||Date.now());
  for(const c of cells){
   const card=document.getElementById('device-'+c.key);if(!card)continue;
@@ -19,15 +20,14 @@
    c.clear=document.createElement('button');c.clear.type='button';c.clear.className='robot-error-reset-button';
    c.label=c.key==='warehouse'?'자재창고':'조립대';
    c.clear.dataset.cellErrorReset=c.key;c.clear.textContent='오류 초기화';c.clear.setAttribute('aria-label',c.label+' 오류 초기화');c.clear.disabled=true;
-   c.clear.title='멈춘 '+c.title+' 작업과 실패 주문 정리 · 원점 복귀·자동 재개 없음';box.append(c.clear);
+   c.clear.title='멈춘 '+c.title+' 작업만 정리 · 실패 단계·완료 수량 유지';box.append(c.clear);
    c.clear.onclick=async()=>{
-    if(c.clear.disabled||!confirm('모든 로봇·팔·리니어가 멈추고 초기 배치와 자재 상태를 확인했습니까? '+c.label+'의 남은 작업과 실패 주문을 정리합니다. 팔 원점 복귀·공정 재개·M1/M2 잠금 해제는 하지 않습니다.'))return;
-    resetBusy=true;paint();
+    if(c.clear.disabled||!confirm('모든 로봇·팔·리니어가 멈추고 현재 위치와 자재 상태를 확인했습니까? '+c.label+'의 남은 작업만 정리하고 실패 단계와 완료 수량은 유지합니다. 자동 재개하지 않으며, 다음 단계 버튼으로 재시도합니다.'))return;
+    resetBusy=true;window.hostDeviceErrorResetBusy=true;paint();
     try{c.message=await CellErrorReset.run({label:c.label,read:readHost,clear:()=>issue(c,'CLEAR_ERROR'),
-     reset:async payload=>{const r=await fetch('/api/live/reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const b=await r.json();if(!r.ok)throw Error(b.error||'주문 초기화 거절');},
      progress:message=>{c.phase='pending';c.message=message;paint();}});c.phase='success';}
     catch(e){c.phase='error';c.message=e.message;}
-    finally{resetBusy=false;paint();}
+    finally{resetBusy=false;window.hostDeviceErrorResetBusy=false;paint();}
    };
   }
  }
@@ -39,8 +39,8 @@
   c.stop.disabled=!fresh(c)||c.pending?.command==='EMER_STOP';
   const paused=c.key==='warehouse'?arm1?.state==='PAUSED'&&Date.now()-arm1At<3500:c.paused;
   const fullResetBusy=hostState?.full_reset?.status==='running'||hostState?.full_reset?.uncertain;
-  c.release.disabled=!fresh(c)||!!c.pending||!paused||resetBusy||fullResetBusy;
-  if(c.clear)c.clear.disabled=!fresh(c)||!!c.pending||resetBusy||fullResetBusy||!hostState?.bridge_connected||hostState.pending_commands>0||!!hostState.manual_move||!!hostState.order&&hostState.order.status!=='failed'||c.key==='warehouse'&&(!arm1?.supports_error_reset||Date.now()-arm1At>=3500||!['IDLE','PAUSED','ERROR'].includes(arm1.state));
+  c.release.disabled=c.key==='production'&&!workcell.ready()||!fresh(c)||!!c.pending||!paused||resetBusy||fullResetBusy;
+  if(c.clear)c.clear.disabled=c.key==='production'&&!workcell.ready()||!fresh(c)||!!c.pending||resetBusy||fullResetBusy||!hostState?.bridge_connected||hostState.pending_commands>0||!!hostState.manual_move||!!hostState.order&&hostState.order.status!=='failed'||c.key==='warehouse'&&(!arm1?.supports_error_reset||Date.now()-arm1At>=3500||!['IDLE','PAUSED','ERROR'].includes(arm1.state));
   c.stop.textContent=c.title+(c.pending?.command==='EMER_STOP'?' 정지 확인 중':' 정지');
   c.release.textContent=c.pending?.command==='RESTART'?'해제 응답 대기':'정지 해제·재개';
   c.status.dataset.phase=c.phase;
@@ -60,10 +60,15 @@
   const result=new Promise(resolve=>{request.resolve=resolve;});
   request.timer=setTimeout(()=>finish(id,false,label+' 응답 시간 초과 · 실제 상태 미확인'),45000);
   requests.set(id,request);c.pending=request;c.phase='pending';c.message=label+' 요청 전송 · 실제 응답 대기';
-  try{socket.send(JSON.stringify({op:'send_action_goal',id,action,action_type:'host_pkg/action/Arm',args:{command},feedback:true}));}
+  try{const wire=c.key==='production'?workcell.encode(command):command;socket.send(JSON.stringify({op:'send_action_goal',id,action,action_type:'host_pkg/action/Arm',args:{command:wire},feedback:true}));}
   catch{finish(id,false,label+' 전송 실패 · 실제 상태 미확인');}paint();return result;
  }
  function receive(m){
+  if(m.op==='publish'&&m.topic==='/workcell/supervision/status'){
+   const reply=workcell.receive(m.msg?.data);
+   if(reply&&connected)socket.send(JSON.stringify({op:'publish',topic:'/workcell/supervision/heartbeat',msg:{data:reply}}));
+   paint();return;
+  }
   if(m.op==='publish'&&m.topic==='/host/device_discovery'){
    let data;try{data=JSON.parse(m.msg?.data);}catch{return;}
    if(!Number.isFinite(data.stamp_ms)||Math.abs(Date.now()-data.stamp_ms)>3500)return;
@@ -79,9 +84,9 @@
    finish(m.id,ok,ok?(r.command==='CLEAR_ERROR'?'남은 작업 종료 확인':r.command==='EMER_STOP'?'정지 응답 확인 · 해제 시 중단 동작 재개':'해제 응답 확인 · 중단 동작 재개 가능'):'요청 실패 / 거부 · 실제 상태 미확인');
   }else if(m.op==='status'&&m.level==='error')finish(m.id,false,'요청 오류 · '+(m.msg||'실제 상태 미확인'));
  }
- function invalidate(){for(const id of [...requests.keys()])finish(id,false,'연결 끊김 · 실제 상태 미확인');for(const c of cells){c.available=false;c.graphAt=0;c.paused=false;}arm1=null;paint();}
+ function invalidate(){workcell.reset();for(const id of [...requests.keys()])finish(id,false,'연결 끊김 · 실제 상태 미확인');for(const c of cells){c.available=false;c.graphAt=0;c.paused=false;}arm1=null;paint();}
  function connect(){if(closed||!local)return;const current=new WebSocket('ws://'+location.hostname+':9090');socket=current;
-  current.onopen=()=>{if(socket!==current)return;connected=true;for(const [topic,type]of [['/host/device_discovery','std_msgs/msg/String'],['/arm1/status','std_msgs/msg/String']])current.send(JSON.stringify({op:'subscribe',id:'cell-controls:'+topic,topic,type,queue_length:1}));paint();};
+  current.onopen=()=>{if(socket!==current)return;connected=true;current.send(JSON.stringify({op:'advertise',topic:'/workcell/supervision/heartbeat',type:'std_msgs/msg/String'}));for(const [topic,type]of [['/workcell/supervision/status','std_msgs/msg/String'],['/host/device_discovery','std_msgs/msg/String'],['/arm1/status','std_msgs/msg/String']])current.send(JSON.stringify({op:'subscribe',id:'cell-controls:'+topic,topic,type,queue_length:1}));paint();};
   current.onmessage=event=>{if(socket!==current||!connected)return;try{receive(JSON.parse(event.data));}catch{}};
   current.onclose=()=>{if(socket!==current)return;connected=false;invalidate();if(!closed)reconnect=setTimeout(connect,3000);};
   current.onerror=()=>current.close();

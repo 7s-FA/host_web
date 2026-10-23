@@ -8,9 +8,10 @@
 <div class="control-card full-reset-status" id="full-reset-progress" hidden><strong id="full-reset-label"></strong><p id="full-reset-detail" role="status"></p><button id="cancel-full-reset-run" type="button">초기화 중단</button></div>
 <div id="control-alert" class="control-alert" role="status" aria-live="polite">로컬 Host 서버에 연결 중입니다.</div>
 <details class="order-panel" id="order-panel" open><summary><strong>생산 주문</strong><span>제품·수량·공정 제어</span></summary><section class="control-card order-card" aria-labelledby="order-heading"><div class="card-head"><div><p class="eyebrow">ORDER</p><h2 id="order-heading">공정 제어</h2></div><div class="order-tools"><button id="full-reset" class="log-button" type="button" disabled>전체 초기화</button><button id="retry-order" class="log-button" type="button" hidden disabled>실패 단계 재시도</button><button id="reset-order" class="log-button" type="button" hidden disabled>실패 주문 초기화</button><strong id="order-status" class="status-tag">주문 없음</strong></div></div><div class="order-fields">
-<fieldset><legend>제품 선택</legend><div class="choice-buttons" id="product-choices"><button type="button" data-product-type="A" aria-pressed="true">A제품</button><button type="button" data-product-type="B" aria-pressed="false">B제품</button></div></fieldset>
-<fieldset><legend>수량</legend><div class="choice-buttons" id="quantity-choices"><button type="button" data-quantity="1" aria-pressed="false">1개</button><button type="button" data-quantity="2" aria-pressed="true">2개</button></div></fieldset>
-</div><label class="auto-advance"><input type="checkbox" id="auto-advance" checked> 자동 진행</label><div class="control-actions"><button id="start-order" class="control-primary" disabled>주문 시작</button><button id="next-stage" disabled>다음 단계</button><button id="pause-order" disabled>단계 후 일시정지</button></div><p class="subtle pause-note">일시정지는 현재 동작 완료 후 적용됩니다.</p><p id="order-selection" class="order-selection visually-hidden">A제품 · 2개 선택</p><p id="order-id" class="subtle visually-hidden">주문 ID —</p><div class="order-progress"><div class="stage-line"><span>완료 단계</span><strong id="stage-number">—</strong></div><p id="stage-label" class="subtle">—</p></div><div class="counters"><div><span>운송 잔여</span><strong id="transport-count">—</strong></div><div><span>완제품 잔여</span><strong id="product-count">—</strong></div><div><span>적재 완료</span><strong id="completed-count">—</strong></div></div><p id="command-note" class="subtle">Host 어댑터의 작업 결과를 기다립니다.</p></section></details>
+<fieldset data-legacy-order><legend>제품 선택</legend><div class="choice-buttons" id="product-choices"><button type="button" data-product-type="A" aria-pressed="true">A제품</button><button type="button" data-product-type="B" aria-pressed="false">B제품</button></div></fieldset>
+<fieldset data-legacy-order><legend>수량</legend><div class="choice-buttons" id="quantity-choices"><button type="button" data-quantity="1" aria-pressed="false">1개</button><button type="button" data-quantity="2" aria-pressed="true">2개</button></div></fieldset>
+<fieldset id="mixed-order-fields" hidden><legend>제품별 수량</legend><div class="choice-buttons"><label>A제품 <select id="quantity-A" aria-label="A제품 수량"><option>0</option><option selected>1</option><option>2</option></select></label><label>B제품 <select id="quantity-B" aria-label="B제품 수량"><option>0</option><option>1</option><option>2</option></select></label></div></fieldset>
+</div><label class="auto-advance"><input type="checkbox" id="auto-advance" checked> 자동 진행</label><div class="control-actions"><button id="start-order" class="control-primary" disabled>주문 시작</button><button id="next-stage" disabled>다음 단계</button><button id="pause-order" disabled>단계 후 일시정지</button></div><p class="subtle pause-note">일시정지는 현재 동작 완료 후 적용됩니다.</p><p id="order-selection" class="order-selection visually-hidden">A제품 · 2개 선택</p><p id="order-id" class="subtle visually-hidden">주문 ID —</p><div class="order-progress"><div class="stage-line"><span>완료 단계</span><strong id="stage-number">—</strong></div><p id="stage-label" class="subtle">—</p></div><div class="counters"><div><span>운송 잔여</span><strong id="transport-count">—</strong></div><div><span>완제품 잔여</span><strong id="product-count">—</strong></div><div><span>적재 완료</span><strong id="completed-count">—</strong></div></div><div id="order-queue-panel" hidden><p id="order-queue-summary" role="status"></p><div class="control-actions"><button id="next-batch" disabled>팔레트 비움 확인 · 다음 묶음</button><button id="clear-queue" disabled>대기 주문 삭제</button></div><p id="order-limit-note" class="subtle">A 최대 2개 · B 최대 2개 · 작업 중 추가 주문도 이어서 생산합니다.</p></div><p id="command-note" class="subtle">Host 어댑터의 작업 결과를 기다립니다.</p></section></details>
 <div class="control-workspace">
 <section class="control-card live-overview" aria-labelledby="live-heading">
 <div class="card-head"><div><p class="eyebrow">LIVE MAP</p><h2 id="live-heading">공정 지도</h2></div><a href="./?live=1" target="_blank" rel="noopener">크게 보기 ↗</a></div>
@@ -27,11 +28,12 @@
 </div>
 
 </main>
+<dialog id="batch-dialog" aria-labelledby="batch-title"><h2 id="batch-title">다음 묶음 시작</h2><p>현재 묶음의 작업이 모두 끝난 뒤 다음 최대 2개를 생산합니다.</p><label><input id="batch-confirmed" type="checkbox"> 완제품 팔레트를 비웠고 다음 제품의 자재가 준비되어 있습니다.</label><div class="reset-actions"><button id="batch-cancel" type="button">취소</button><button id="batch-confirm" type="button" disabled>확인 후 시작</button></div></dialog>
 <dialog id="full-reset-dialog" aria-labelledby="full-reset-title">
 <form id="full-reset-form"><h2 id="full-reset-title">전체 초기화</h2>
 <label><input id="full-reset-parked" type="checkbox"> M1·M2를 둘 다 지정 주차 위치·방향에 직접 놓았습니다.</label>
 <p>위 항목을 선택하면 M1·M2의 주차 위치 기준 위치 추정·Nav2 준비를 먼저 확인하고 팔·리니어를 복귀시킵니다. M1·M2 주차 이동은 보내지 않습니다. 다른 곳에 있는 로봇에는 선택하지 마세요.</p>
-<p>선택하지 않으면 팔1 초기 자세 → 팔2·3 저장 자세 → 리니어 바깥쪽 위치 → M1 주차 → M2 주차 순서로 실제 움직입니다. 모두 완료되면 기존 주문을 기록에 보관하고 비웁니다.</p>
+<p>선택하지 않으면 팔1 초기 자세 → 팔2·3 저장 자세 → 리니어 바깥쪽 위치 → M1 주차 → M2 주차 순서로 실제 움직입니다. 모두 완료되면 기존 주문을 기록에 보관하고 대기 주문도 비웁니다.</p>
 <p>도킹 중단으로 출차가 금지되거나 한 단계라도 실패하면 다음 장치를 움직이지 않습니다. 위 주차 위치 확인 항목을 선택한 경우에만 위치 추정값을 주차 좌표로 다시 설정합니다.</p>
 <label><input id="full-reset-confirmed" type="checkbox" required> 모든 장치와 리니어가 멈췄고, 팔의 복귀 공간·주차 경로가 비어 있으며 자재와 집게 상태가 복귀에 적합함을 확인했습니다.</label>
 <p id="full-reset-note" role="status"></p><div class="reset-actions"><button id="cancel-full-reset" type="button">취소</button><button id="confirm-full-reset" type="submit">확인 후 전체 초기화</button></div></form></dialog>
@@ -75,10 +77,11 @@
 <script src="robot-stop.js?v=20261020-full-reset"></script>
 <script src="robot-battery-client.js?v=20261011-battery"></script>
 <script src="robot-battery.js?v=20261011-battery"></script>
-<script src="assets/control/combined-reset.js?v=20261019-order-reset"></script>
-<script src="control.js?v=20261021-compact"></script>
-<script src="assets/control/cell-error-reset.js?v=20261020-cell-clear"></script>
-<script src="assets/control/cell-controls.js?v=20261021-compact"></script>
+<script src="assets/control/combined-reset.js?v=20261021-preserve-retry"></script>
+<script src="control.js?v=20261022-continuous"></script>
+<script src="assets/control/cell-error-reset.js?v=20261021-preserve-retry"></script>
+<script src="assets/control/workcell-session.js?v=20261022-v2"></script>
+<script src="assets/control/cell-controls.js?v=20261022-v2"></script>
 <script src="device-connection-client.js?v=20261019-discovery-stream"></script>
 <script src="device-connection.js?v=20261011-connection"></script>
 <script src="usage-modal.js?v=20261019-layout-scale"></script></body></html>
